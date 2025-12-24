@@ -203,47 +203,57 @@ def yapi_to_response(yapi: DBYapi) -> dict:
 
 def add_sample_data():
     """Örnek veri ekle"""
-    from database import SessionLocal
+    from backend.database import SessionLocal
     db = SessionLocal()
     try:
-        # Mevcut veri kontrolü
-        existing = db.query(DBYapi).filter(DBYapi.ad == "Molla Hüsrev Camii").first()
+        # Mevcut veri kontrolü (bina_adi sütunuyla)
+        existing = db.query(DBYapi).filter(DBYapi.bina_adi == "Molla Hüsrev Camii").first()
         if existing:
             print("Örnek veri zaten mevcut.")
             return
         
-        # Molla Hüsrev Camii
+        # Molla Hüsrev Camii - TÜCBS ve INSPIRE uyumlu
         yapi = DBYapi(
-            ad="Molla Hüsrev Camii",
+            bina_adi="Molla Hüsrev Camii",
             ad_en="Molla Husrev Mosque",
             tur="Cami",
-            donem="Osmanlı",
-            mimar="Bilinmiyor",
-            yapim_yili="1475-1476",
-            konum="Molla Hüsrev, Fatih",
+            yapi_turu="dini",
+            donem="Osmanlı - Fatih Dönemi",
+            mimar="Bilinmiyor (Klasik Osmanlı Üslubu)",
+            insaat_tarihi="1460",
+            konum="Molla Hüsrev Mahallesi, Fatih",
             ilce="Fatih",
-            aciklama="Fatih döneminde Şeyhülislam Molla Hüsrev tarafından yaptırılmış tarihi cami."
+            aciklama="Fatih Sultan Mehmed döneminin ünlü Şeyhülislamı Molla Hüsrev tarafından 1460 yılında yaptırılan bu cami, klasik Osmanlı mimarisinin erken dönem örneklerinden biridir.",
+            building_nature="mosque",
+            lod_seviyesi="LoD3",
+            yapi_durumu="kullanilabilir",
+            koruma_grubu="I",
+            mulkiyet_durumu="vakif",
+            mahalle="Molla Hüsrev",
+            land_cover_code="1.1.1",
+            land_cover_desc="Sürekli Kentsel Yapı"
         )
         db.add(yapi)
         db.commit()
         db.refresh(yapi)
         
-        # Metadata ekle
+        # Metadata ekle - Doğru Cesium Ion Asset ID'leri
         metadata = DBYapiMetadata(
             yapi_id=yapi.id,
-            tileset_url="cesium_ion:4270999",
-            nokta_bulutu_url="/data/pointcloud/molla-husrev/metadata.json",
+            tileset_url="cesium_ion:4270999",  # Dış cephe
+            ic_mekan_tileset_url="cesium_ion:4271001",  # İç mekan
+            ic_mekan_ion_asset_id=4275532,  # İç mekan point cloud
             lod_seviyesi=3,
             nokta_sayisi=15000000,
             dosya_boyutu_mb=1920.0
         )
         db.add(metadata)
         
-        # Örnek katmanlar ekle
+        # Örnek katmanlar ekle - Doğru Cesium Ion Asset ID'leri
         katmanlar = [
             DBKatman(ad="Molla Hüsrev - Dış Cephe", tur="3dtiles", url="cesium_ion:4270999", gorunur=True, saydamlik=1.0, sira=1),
-            DBKatman(ad="Molla Hüsrev - İç Mekan", tur="pointcloud", url="/data/pointcloud/molla-husrev/metadata.json", gorunur=True, saydamlik=1.0, sira=2),
-            DBKatman(ad="Çevre LoD0 Modeli", tur="3dtiles", url="/data/3dtiles/context/tileset.json", gorunur=True, saydamlik=0.8, sira=3),
+            DBKatman(ad="Molla Hüsrev - İç Mekan 1", tur="3dtiles", url="cesium_ion:4271001", gorunur=True, saydamlik=1.0, sira=2),
+            DBKatman(ad="Molla Hüsrev - İç Mekan 2", tur="3dtiles", url="cesium_ion:4275532", gorunur=True, saydamlik=1.0, sira=3),
         ]
         for katman in katmanlar:
             db.add(katman)

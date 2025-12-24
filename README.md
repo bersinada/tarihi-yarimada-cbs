@@ -18,13 +18,13 @@ Bu proje, İTÜ CBS Projeleri dersi kapsamında geliştirilmiştir. Tarihi Yarı
 
 ## 🛠️ Kullanılan Teknolojiler
 
-| Katman | Teknoloji |
-|--------|-----------|
-| **Frontend** | HTML5, CSS3, JavaScript |
-| **3D Görselleştirme** | Cesium JS, Potree |
-| **Backend** | FastAPI (Python) |
-| **Veritabanı** | PostgreSQL + PostGIS |
-| **Veri Formatları** | 3D Tiles, LAS/LAZ (Point Cloud) |
+| Katman                        | Teknoloji                       |
+| ----------------------------- | ------------------------------- |
+| **Frontend**            | HTML5, CSS3, JavaScript         |
+| **3D Görselleştirme** | Cesium JS, Potree               |
+| **Backend**             | FastAPI (Python)                |
+| **Veritabanı**         | PostgreSQL + PostGIS            |
+| **Veri Formatları**    | 3D Tiles, LAS/LAZ (Point Cloud) |
 
 ## 📁 Proje Yapısı
 
@@ -109,23 +109,25 @@ DATABASE_URL=postgresql://username:password@localhost:5432/tarihi_yarimada_cbs
 
 ### Klavye Kısayolları
 
-| Kısayol | İşlev |
-|---------|-------|
-| `Ctrl + 1` | Cesium görünümü |
-| `Ctrl + 2` | Potree görünümü |
-| `Ctrl + 3` | Split görünüm |
-| `H` | Ana görünüme dön |
-| `L` | Katmanlar paneli |
-| `Esc` | Panelleri kapat |
+| Kısayol     | İşlev              |
+| ------------ | -------------------- |
+| `Ctrl + 1` | Cesium görünümü  |
+| `Ctrl + 2` | Potree görünümü  |
+| `Ctrl + 3` | Split görünüm     |
+| `H`        | Ana görünüme dön |
+| `L`        | Katmanlar paneli     |
+| `Esc`      | Panelleri kapat      |
 
 ### Viewer Kontrolleri
 
 **Cesium (Dış Cephe):**
+
 - Sol tık + sürükle: Döndür
 - Sağ tık + sürükle: Yakınlaştır
 - Orta tık + sürükle: Kaydır
 
 **Potree (İç Mekan):**
+
 - Sol tık + sürükle: Orbit
 - Sağ tık + sürükle: Kaydır
 - Scroll: Yakınlaştır/Uzaklaştır
@@ -153,17 +155,17 @@ data/pointcloud/molla-husrev/
 
 ## 🔗 API Endpoints
 
-| Method | Endpoint | Açıklama |
-|--------|----------|----------|
-| GET | `/api/v1/health` | Sağlık kontrolü |
-| GET | `/api/v1/buildings` | Yapı listesi |
-| GET | `/api/v1/buildings/{id}` | Yapı detayı |
-| GET | `/api/v1/buildings/{id}/tileset` | 3D Tiles URL |
-| GET | `/api/v1/buildings/{id}/pointcloud` | Point Cloud URL |
-| GET | `/api/v1/layers` | Katman listesi |
-| POST | `/api/v1/query/spatial` | Mekansal sorgu |
-| POST | `/api/v1/measurements` | Ölçüm kaydet |
-| POST | `/api/v1/annotations` | Anotasyon ekle |
+| Method | Endpoint                              | Açıklama         |
+| ------ | ------------------------------------- | ------------------ |
+| GET    | `/api/v1/health`                    | Sağlık kontrolü |
+| GET    | `/api/v1/buildings`                 | Yapı listesi      |
+| GET    | `/api/v1/buildings/{id}`            | Yapı detayı      |
+| GET    | `/api/v1/buildings/{id}/tileset`    | 3D Tiles URL       |
+| GET    | `/api/v1/buildings/{id}/pointcloud` | Point Cloud URL    |
+| GET    | `/api/v1/layers`                    | Katman listesi     |
+| POST   | `/api/v1/query/spatial`             | Mekansal sorgu     |
+| POST   | `/api/v1/measurements`              | Ölçüm kaydet    |
+| POST   | `/api/v1/annotations`               | Anotasyon ekle     |
 
 ## ⚙️ Cesium Ion Token
 
@@ -185,9 +187,8 @@ Proje aşağıdaki standartlara uygun geliştirilmiştir:
 
 ## 👥 Ekip
 
-İTÜ CBS Projeleri 2024
+İTÜ CBS Projeleri 2025
 
 ## 📄 Lisans
 
 Bu proje akademik amaçlı geliştirilmiştir.
-

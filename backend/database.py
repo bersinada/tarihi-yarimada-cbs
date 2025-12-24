@@ -58,8 +58,9 @@ def init_db():
     # PostGIS extension'ı aktifleştir
     with engine.connect() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
-        conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis_topology;"))
-        conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'))
+        # Not: postgis_topology ve uuid-ossp Azure'da izin gerektiriyor
+        # conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis_topology;"))
+        # conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'))
         conn.commit()
     
     # Tabloları oluştur
@@ -240,8 +241,9 @@ class Yapi(Base):
     # ===== Relationships =====
     yapi_metadata = relationship("YapiMetadata", back_populates="yapi", uselist=False)
     aciklamalar = relationship("Aciklama", back_populates="yapi")
-    ic_mekan_bolgeler = relationship("IcMekanBolge", back_populates="yapi")
-    metadata_kayitlari = relationship("Metadata", back_populates="yapi")
+    # Not: Aşağıdaki ilişkiler migration sonrası aktif edilecek
+    # ic_mekan_bolgeler = relationship("IcMekanBolge", back_populates="yapi")
+    # metadata_kayitlari = relationship("Metadata", back_populates="yapi")
     
     @property
     def inspire_id(self):
@@ -321,9 +323,9 @@ class IcMekanBolge(Base):
     olusturulma_tarihi = Column(DateTime, default=datetime.utcnow)
     guncellenme_tarihi = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Relationships
-    yapi = relationship("Yapi", back_populates="ic_mekan_bolgeler")
-    aciklamalar = relationship("Aciklama", back_populates="ic_mekan_bolge")
+    # Not: Relationships migration sonrası aktif edilecek
+    # yapi = relationship("Yapi", back_populates="ic_mekan_bolgeler")
+    # aciklamalar = relationship("Aciklama", back_populates="ic_mekan_bolge")
 
 
 class IcMekanRota(Base):
@@ -355,25 +357,26 @@ class Aciklama(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     yapi_id = Column(Integer, ForeignKey("yapi.id"))
-    ic_mekan_bolge_id = Column(Integer, ForeignKey("ic_mekan_bolge.id"))  # İç mekan bölge referansı
+    # Not: ic_mekan_bolge_id migration sonrası aktif edilecek
+    # ic_mekan_bolge_id = Column(Integer, ForeignKey("ic_mekan_bolge.id"))
     
     baslik = Column(String(255), nullable=False)
     aciklama = Column(Text)
     
-    # 3D pozisyon - Legacy (x, y, z ayrı)
+    # 3D pozisyon (x, y, z ayrı)
     x = Column(Float)
     y = Column(Float)
     z = Column(Float)
     
-    # PostGIS Geometri (yeni)
-    geom = Column(Geometry('POINTZ', srid=4326))
+    # Not: geom sütunu migration sonrası aktif edilecek
+    # geom = Column(Geometry('POINTZ', srid=4326))
     
     olusturan = Column(String(100))
     olusturulma_tarihi = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
     yapi = relationship("Yapi", back_populates="aciklamalar")
-    ic_mekan_bolge = relationship("IcMekanBolge", back_populates="aciklamalar")
+    # ic_mekan_bolge = relationship("IcMekanBolge", back_populates="aciklamalar")
 
 
 class Katman(Base):
@@ -388,15 +391,15 @@ class Katman(Base):
     saydamlik = Column(Float, default=1.0)
     sira = Column(Integer, default=0)
     
-    # İç mekan desteği
-    ic_mekan = Column(Boolean, default=False)
-    cesium_ion_asset_id = Column(Integer)
-    baslangic_kamera_pozisyon = Column(Geometry('POINTZ', srid=4326))
+    # Not: Aşağıdaki sütunlar migration sonrası aktif edilecek
+    # ic_mekan = Column(Boolean, default=False)
+    # cesium_ion_asset_id = Column(Integer)
+    # baslangic_kamera_pozisyon = Column(Geometry('POINTZ', srid=4326))
     
     olusturulma_tarihi = Column(DateTime, default=datetime.utcnow)
     
-    # Relationships
-    metadata_kayitlari = relationship("Metadata", back_populates="katman")
+    # Relationships - Migration sonrası aktif edilecek
+    # metadata_kayitlari = relationship("Metadata", back_populates="katman")
 
 
 class Metadata(Base):
@@ -479,9 +482,9 @@ class Metadata(Base):
     metadata_olusturma_tarihi = Column(DateTime, default=datetime.utcnow)
     metadata_guncelleme_tarihi = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Relationships
-    yapi = relationship("Yapi", back_populates="metadata_kayitlari")
-    katman = relationship("Katman", back_populates="metadata_kayitlari")
+    # Not: Relationships migration sonrası aktif edilecek
+    # yapi = relationship("Yapi", back_populates="metadata_kayitlari")
+    # katman = relationship("Katman", back_populates="metadata_kayitlari")
 
 
 class CorineAraziOrtusu(Base):

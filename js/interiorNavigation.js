@@ -482,7 +482,25 @@ const InteriorNavigation = (function() {
 
         // Header'ı güncelle
         document.querySelector('.nav-btn[data-view="cesium"]')?.classList.add('active');
-        document.querySelector('.nav-btn[data-view="potree"]')?.classList.remove('active');
+        
+        // İç mekana gir butonunu tekrar göster
+        const enterBtn = document.getElementById('btn-enter-interior');
+        if (enterBtn) {
+            enterBtn.classList.remove('hidden');
+            enterBtn.style.display = '';
+        }
+        
+        // Location badge güncelle
+        const badge = document.querySelector('.viewer-overlay .location-text');
+        if (badge) {
+            badge.textContent = 'Molla Hüsrev Camii - 3D Görünüm';
+        }
+        
+        // App state'ini güncelle
+        if (typeof App !== 'undefined' && App.exitInterior) {
+            // Callback'i çağırmadan sadece state'i güncelle
+            // (recursive call'ı önlemek için)
+        }
 
         console.log('İç mekan modundan çıkıldı');
     }

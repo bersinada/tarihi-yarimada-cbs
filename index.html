@@ -14,12 +14,6 @@
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Cesium.js"></script>
     <link href="https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
     
-    <!-- Potree - Disabled for now, enable when you have point cloud data -->
-    <!-- 
-    <script src="https://cdn.jsdelivr.net/gh/potree/potree@develop/build/potree/potree.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/potree/potree@develop/build/potree/potree.css">
-    -->
-    
     <!-- Custom Styles -->
     <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -56,19 +50,11 @@
                 </div>
             </div>
             
+            <!-- Navigasyon artık sadece tek görünüm - İç mekan gezintisi ayrı butonla yapılıyor -->
             <nav class="header-nav">
                 <button class="nav-btn active" data-view="cesium">
                     <span class="nav-icon">🏛️</span>
-                    <span class="nav-text">Dış Cephe</span>
-                </button>
-                <button class="nav-btn" data-view="potree">
-                    <span class="nav-icon">✨</span>
-                    <span class="nav-text">İç Mekan</span>
-                </button>
-                <button class="nav-btn" data-view="split">
-                    <span class="nav-icon">⬜</span>
-                    <span class="nav-text">Karşılaştır</span>
-                    <span class="nav-badge">Split View</span>
+                    <span class="nav-text">3D Görünüm</span>
                 </button>
             </nav>
             
@@ -116,16 +102,6 @@
                 </div>
             </div>
             
-            <!-- Potree Viewer -->
-            <div id="potree-container" class="viewer-container">
-                <div id="potreeViewer" class="viewer"></div>
-                <div class="viewer-overlay">
-                    <div class="location-badge">
-                        <span class="location-icon">📍</span>
-                        <span class="location-text">Molla Hüsrev Camii - İç Mekan</span>
-                    </div>
-                </div>
-            </div>
         </main>
 
         <!-- Side Panel -->
@@ -140,16 +116,22 @@
                     <h3 class="section-title">3D Modeller</h3>
                     <div class="layer-list">
                         <label class="layer-item">
-                            <input type="checkbox" checked data-layer="molla-husrev-exterior">
+                            <input type="checkbox" checked data-layer="exterior" data-asset-id="4270999">
                             <span class="layer-checkbox"></span>
                             <span class="layer-name">Molla Hüsrev - Dış Cephe</span>
                             <span class="layer-type">3D Tiles</span>
                         </label>
                         <label class="layer-item">
-                            <input type="checkbox" checked data-layer="molla-husrev-interior">
+                            <input type="checkbox" checked data-layer="interior-1" data-asset-id="4271001">
                             <span class="layer-checkbox"></span>
-                            <span class="layer-name">Molla Hüsrev - İç Mekan</span>
-                            <span class="layer-type">Point Cloud</span>
+                            <span class="layer-name">Molla Hüsrev - İç Mekan 1</span>
+                            <span class="layer-type">3D Tiles</span>
+                        </label>
+                        <label class="layer-item">
+                            <input type="checkbox" checked data-layer="interior-2" data-asset-id="4275532">
+                            <span class="layer-checkbox"></span>
+                            <span class="layer-name">Molla Hüsrev - İç Mekan 2</span>
+                            <span class="layer-type">3D Tiles</span>
                         </label>
                     </div>
                 </section>
@@ -262,11 +244,7 @@
                         <div class="tech-grid">
                             <div class="tech-item">
                                 <strong>Cesium JS</strong>
-                                <span>3D Tiles Görselleştirme</span>
-                            </div>
-                            <div class="tech-item">
-                                <strong>Potree</strong>
-                                <span>Point Cloud Render</span>
+                                <span>3D Tiles & İç Mekan</span>
                             </div>
                             <div class="tech-item">
                                 <strong>PostGIS</strong>
@@ -275,6 +253,10 @@
                             <div class="tech-item">
                                 <strong>FastAPI</strong>
                                 <span>Backend API</span>
+                            </div>
+                            <div class="tech-item">
+                                <strong>INSPIRE/TÜCBS</strong>
+                                <span>Standart Uyumu</span>
                             </div>
                         </div>
                     </div>
@@ -356,8 +338,8 @@
                         <label class="settings-label">Render Kalitesi</label>
                         <select class="settings-select" id="render-quality">
                             <option value="low">Düşük</option>
-                            <option value="medium" selected>Orta</option>
-                            <option value="high">Yüksek</option>
+                            <option value="medium">Orta</option>
+                            <option value="high" selected>Yüksek</option>
                             <option value="ultra">Ultra</option>
                         </select>
                     </div>
@@ -453,7 +435,6 @@
     <!-- Scripts -->
     <script src="js/api.js"></script>
     <script src="js/cesiumViewer.js"></script>
-    <script src="js/potreeViewer.js"></script>
     <script src="js/interiorNavigation.js"></script>
     <script src="js/main.js"></script>
 </body>

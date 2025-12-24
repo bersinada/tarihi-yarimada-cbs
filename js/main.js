@@ -6,18 +6,18 @@
 const App = (function() {
     // Uygulama durumu
     const state = {
-        currentView: 'cesium', // 'cesium', 'potree', 'split'
+        currentView: 'cesium', // 'cesium' (tek görünüm)
         isPanelOpen: false,
         isBasemapPanelOpen: false,
         currentBasemap: 'satellite', // Varsayılan: uydu görüntüsü
         isLoading: true,
         cesiumReady: false,
-        potreeReady: false,
         orbitLocked: false, // Orbit kilidi durumu
         currentYapiId: 1, // Varsayılan yapı ID (Molla Hüsrev Camii)
         notes: [], // Kayıtlı notlar
         interiorMode: false, // İç mekan modu aktif mi?
-        interiorIonAssetId: null // İç mekan 3D Tiles asset ID (varsa)
+        loadedTilesets: {}, // Yüklenen tilesetler: { assetId: tileset }
+        renderQuality: 'high' // Varsayılan render kalitesi
     };
 
     // DOM elementleri
@@ -60,7 +60,6 @@ const App = (function() {
         
         // Containers
         elements.cesiumContainer = document.getElementById('cesium-container');
-        elements.potreeContainer = document.getElementById('potree-container');
         elements.mainContent = document.querySelector('.main-content');
         
         // Navigation
@@ -256,12 +255,22 @@ const App = (function() {
             // FPS sayacını başlat
             CesiumViewer.startFPSCounter();
             
-            // Molla Hüsrev Camii 3D modelini yükle (Cesium Ion Asset ID: 4270999)
-            updateLoadingStatus('3D model yükleniyor...');
-            await CesiumViewer.loadFromIonAssetId(4270999);
-            await CesiumViewer.loadFromIonAssetId(4271001);
-            await CesiumViewer.loadFromIonAssetId(4275532);
-
+            // Render kalitesini yüksek olarak ayarla
+            CesiumViewer.setQuality(state.renderQuality);
+            
+            // Molla Hüsrev Camii 3D modellerini yükle
+            updateLoadingStatus('3D modeller yükleniyor...');
+            
+            // Dış cephe (Asset ID: 4270999)
+            const exteriorTileset = await CesiumViewer.loadFromIonAssetId(4270999, { zoomTo: false });
+            state.loadedTilesets['4270999'] = exteriorTileset;
+            
+            // İç mekan modelleri (Asset ID: 4271001 ve 4275532)
+            const interior1Tileset = await CesiumViewer.loadFromIonAssetId(4271001, { zoomTo: false });
+            state.loadedTilesets['4271001'] = interior1Tileset;
+            
+            const interior2Tileset = await CesiumViewer.loadFromIonAssetId(4275532, { zoomTo: false });
+            state.loadedTilesets['4275532'] = interior2Tileset;
             
             // Model etrafında orbit modunu aktifleştir
             updateLoadingStatus('Orbit modu ayarlanıyor...');
@@ -270,28 +279,6 @@ const App = (function() {
         } catch (error) {
             console.error('Cesium başlatılamadı:', error);
             updateLoadingStatus('Cesium yüklenirken hata oluştu');
-        }
-
-        updateLoadingStatus('Potree Viewer hazırlanıyor...');
-        
-        // Potree sadece kütüphane yüklüyse başlat
-        if (typeof Potree !== 'undefined') {
-            try {
-                // Potree Viewer'ı başlat
-                PotreeViewer.initialize('potreeViewer');
-                state.potreeReady = true;
-                
-                // Demo point cloud yükle (gerçek veri yoksa)
-                updateLoadingStatus('Point cloud yükleniyor...');
-                await PotreeViewer.loadDemoPointCloud();
-                
-            } catch (error) {
-                console.warn('Potree başlatılamadı:', error);
-                state.potreeReady = false;
-            }
-        } else {
-            console.warn('Potree kütüphanesi yüklenmedi, sadece Cesium kullanılacak');
-            state.potreeReady = false;
         }
         
         updateLoadingStatus('Hazır!');
@@ -357,24 +344,8 @@ const App = (function() {
             btn.classList.toggle('active', btn.dataset.view === view);
         });
         
-        // Container'ları güncelle
-        elements.mainContent.classList.remove('split-view');
-        elements.cesiumContainer.classList.remove('active');
-        elements.potreeContainer.classList.remove('active');
-        
-        switch(view) {
-            case 'cesium':
-                elements.cesiumContainer.classList.add('active');
-                break;
-            case 'potree':
-                elements.potreeContainer.classList.add('active');
-                break;
-            case 'split':
-                elements.mainContent.classList.add('split-view');
-                elements.cesiumContainer.classList.add('active');
-                elements.potreeContainer.classList.add('active');
-                break;
-        }
+        // Cesium her zaman aktif (tek görünüm)
+        elements.cesiumContainer.classList.add('active');
         
         // Location badge'i güncelle
         updateLocationBadge(view);
@@ -384,14 +355,14 @@ const App = (function() {
      * Location badge'i güncelle
      */
     function updateLocationBadge(view) {
-        const cesiumBadge = elements.cesiumContainer.querySelector('.location-text');
-        const potreeBadge = elements.potreeContainer.querySelector('.location-text');
+        const cesiumBadge = elements.cesiumContainer?.querySelector('.location-text');
         
         if (cesiumBadge) {
-            cesiumBadge.textContent = 'Molla Hüsrev Camii - Dış Cephe';
-        }
-        if (potreeBadge) {
-            potreeBadge.textContent = 'Molla Hüsrev Camii - İç Mekan';
+            if (state.interiorMode) {
+                cesiumBadge.textContent = 'Molla Hüsrev Camii - İç Mekan Gezintisi';
+            } else {
+                cesiumBadge.textContent = 'Molla Hüsrev Camii - 3D Görünüm';
+            }
         }
     }
 
@@ -480,11 +451,12 @@ const App = (function() {
      * Home butonuna tıklama
      */
     function handleHomeClick() {
-        if (state.currentView === 'cesium' || state.currentView === 'split') {
+        if (state.interiorMode && typeof InteriorNavigation !== 'undefined') {
+            // İç mekan modundayken girişe git
+            InteriorNavigation.goToEntrance();
+        } else {
+            // Normal modda ana görünüme dön
             CesiumViewer.flyToHome();
-        }
-        if (state.potreeReady && (state.currentView === 'potree' || state.currentView === 'split')) {
-            PotreeViewer.resetCamera();
         }
     }
 
@@ -511,43 +483,21 @@ const App = (function() {
      * Yakınlaştır
      */
     function handleZoomIn() {
-        if (state.currentView === 'cesium' || state.currentView === 'split') {
-            CesiumViewer.zoomIn();
-        }
-        if (state.potreeReady && (state.currentView === 'potree' || state.currentView === 'split')) {
-            PotreeViewer.zoomIn();
-        }
+        CesiumViewer.zoomIn();
     }
 
     /**
      * Uzaklaştır
      */
     function handleZoomOut() {
-        if (state.currentView === 'cesium' || state.currentView === 'split') {
-            CesiumViewer.zoomOut();
-        }
-        if (state.potreeReady && (state.currentView === 'potree' || state.currentView === 'split')) {
-            PotreeViewer.zoomOut();
-        }
+        CesiumViewer.zoomOut();
     }
 
     /**
      * Tam ekran
      */
     function handleFullscreen() {
-        if (state.currentView === 'cesium') {
-            CesiumViewer.toggleFullscreen();
-        } else if (state.currentView === 'potree' && state.potreeReady) {
-            PotreeViewer.toggleFullscreen();
-        } else {
-            // Split view'da ana container'ı fullscreen yap
-            const container = elements.mainContent;
-            if (!document.fullscreenElement) {
-                container.requestFullscreen();
-            } else {
-                document.exitFullscreen();
-            }
-        }
+        CesiumViewer.toggleFullscreen();
     }
 
     /**
@@ -556,9 +506,16 @@ const App = (function() {
     function handleLayerToggle(layerId, visible) {
         console.log(`Katman ${layerId}: ${visible ? 'açık' : 'kapalı'}`);
         
-        CesiumViewer.setLayerVisibility(layerId, visible);
-        if (state.potreeReady) {
-            PotreeViewer.setLayerVisibility(layerId, visible);
+        // Asset ID'yi bul
+        const checkbox = document.querySelector(`input[data-layer="${layerId}"]`);
+        const assetId = checkbox?.dataset.assetId;
+        
+        if (assetId && state.loadedTilesets[assetId]) {
+            state.loadedTilesets[assetId].show = visible;
+            console.log(`Tileset ${assetId} görünürlük: ${visible}`);
+        } else {
+            // Fallback: CesiumViewer'ın setLayerVisibility'sini kullan
+            CesiumViewer.setLayerVisibility(layerId, visible);
         }
     }
 
@@ -858,42 +815,32 @@ const App = (function() {
      * İç mekandan çıkış (public API için)
      */
     function handleExitInterior() {
-        if (typeof InteriorNavigation !== 'undefined' && InteriorNavigation.isInsideMode()) {
-            InteriorNavigation.exitInterior();
-            state.interiorMode = false;
-            
-            // Giriş butonunu göster
-            if (elements.btnEnterInterior) {
-                elements.btnEnterInterior.classList.remove('hidden');
-            }
-            
-            // Location badge güncelle
-            const badge = document.querySelector('.viewer-overlay .location-text');
-            if (badge) {
-                badge.textContent = 'Molla Hüsrev Camii - Dış Cephe';
-            }
+        state.interiorMode = false;
+        
+        // Giriş butonunu göster
+        if (elements.btnEnterInterior) {
+            elements.btnEnterInterior.classList.remove('hidden');
+            elements.btnEnterInterior.style.display = '';
         }
+        
+        // Location badge güncelle
+        updateLocationBadge('cesium');
+        
+        console.log('İç mekan modundan çıkıldı, buton tekrar gösterildi');
     }
 
     /**
      * Kalite değişikliği
      */
     function handleQualityChange(quality) {
+        state.renderQuality = quality;
         CesiumViewer.setQuality(quality);
-        if (state.potreeReady) {
-            PotreeViewer.setQuality(quality);
-        }
     }
 
     /**
      * Point boyutu değişikliği
      */
     function handlePointSizeChange(size) {
-        // Potree viewer için
-        if (state.potreeReady) {
-            PotreeViewer.setPointSize(size);
-        }
-        
         // Cesium viewer için (3D Tiles point cloud desteği)
         if (state.cesiumReady) {
             CesiumViewer.setPointSize(size);
@@ -916,20 +863,24 @@ const App = (function() {
             return; // Yazı yazılıyorsa kısayolları çalıştırma
         }
         
-        // Ctrl+1: Cesium view
-        if (e.ctrlKey && e.key === '1') {
+        // Ctrl+H: Ana görünüme dön
+        if (e.ctrlKey && e.key === 'h') {
             e.preventDefault();
-            handleNavigation('cesium');
+            handleHomeClick();
         }
-        // Ctrl+2: Potree view
-        if (e.ctrlKey && e.key === '2') {
+        // Ctrl+I: İç mekan moduna gir/çık
+        if (e.ctrlKey && e.key === 'i') {
             e.preventDefault();
-            handleNavigation('potree');
+            if (state.interiorMode) {
+                handleExitInterior();
+            } else {
+                handleEnterInterior();
+            }
         }
-        // Ctrl+3: Split view
-        if (e.ctrlKey && e.key === '3') {
+        // Ctrl+L: Katmanlar panelini aç/kapat
+        if (e.ctrlKey && e.key === 'l') {
             e.preventDefault();
-            handleNavigation('split');
+            toggleSidePanel();
         }
     }
 
@@ -946,14 +897,26 @@ const App = (function() {
     }
 
     /**
-     * Point Cloud URL ile yükle
+     * Ion Asset ID ile yükle
      */
-    async function loadPointCloud(url, name) {
+    async function loadFromIonAssetId(assetId, options = {}) {
         try {
-            await PotreeViewer.loadPointCloud(url, name);
-            console.log('Point Cloud yüklendi:', url);
+            const tileset = await CesiumViewer.loadFromIonAssetId(assetId, options);
+            state.loadedTilesets[assetId.toString()] = tileset;
+            console.log('Ion Asset yüklendi:', assetId);
+            return tileset;
         } catch (error) {
-            console.error('Point Cloud yüklenemedi:', error);
+            console.error('Ion Asset yüklenemedi:', error);
+        }
+    }
+
+    /**
+     * Belirli bir tileset'in görünürlüğünü ayarla
+     */
+    function setTilesetVisibility(assetId, visible) {
+        const tileset = state.loadedTilesets[assetId.toString()];
+        if (tileset) {
+            tileset.show = visible;
         }
     }
 
@@ -961,10 +924,12 @@ const App = (function() {
     return {
         initialize,
         loadTileset,
-        loadPointCloud,
+        loadFromIonAssetId,
+        setTilesetVisibility,
         
         // State
         getState: () => ({ ...state }),
+        getLoadedTilesets: () => ({ ...state.loadedTilesets }),
         
         // Navigation
         switchView: handleNavigation,
