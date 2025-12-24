@@ -294,11 +294,19 @@ const CesiumViewer = (function() {
 
             // Scene ayarları
             configureScene();
-            
-            // Zoom sınırlarını ayarla - Sınırsız uzaklaşma
+
+            // Zoom sınırlarını ayarla - Optimize edilmiş
             const controller = viewer.scene.screenSpaceCameraController;
-            controller.minimumZoomDistance = 1; // 1 metre minimum
+            controller.minimumZoomDistance = 5; // 5 metre minimum (modelin içine fazla girmemesi için)
             controller.maximumZoomDistance = 50000000; // 50.000 km maksimum (dünya görünümü için)
+
+            // Kamera hareketlerini yumuşatmak için inertia ayarları
+            controller.inertiaSpin = 0.95;
+            controller.inertiaTranslate = 0.95;
+            controller.inertiaZoom = 0.85;
+
+            // Collision detection - Modele çarpmayı önle
+            viewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
 
             // Kamerayı başlangıç pozisyonuna getir
             flyToHome();
@@ -460,7 +468,7 @@ const CesiumViewer = (function() {
         '4270999': 78.5,  // Dış cephe - terrain üzerine çıksın
         '4271001': 80,    // İç mekan 1
         '4275532': 80,    // İç mekan 2
-        '4277312': 80     // Şadırvan
+        '4277312': 78.5   // Şadırvan
     };
 
     /**
