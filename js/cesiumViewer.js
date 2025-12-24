@@ -460,7 +460,7 @@ const CesiumViewer = (function() {
         '4270999': 78.5,  // Dış cephe - terrain üzerine çıksın
         '4271001': 80,    // İç mekan 1
         '4275532': 80,    // İç mekan 2
-        '4270998': 80     // Şadırvan
+        '4277312': 80     // Şadırvan
     };
 
     /**
@@ -962,8 +962,8 @@ const CesiumViewer = (function() {
                 if (loadedTilesets['4275532']) loadedTilesets['4275532'].show = visible;
                 break;
             case 'sadirvan':
-            case '4270998':
-                if (loadedTilesets['4270998']) loadedTilesets['4270998'].show = visible;
+            case '4277312':
+                if (loadedTilesets['4277312']) loadedTilesets['4277312'].show = visible;
                 break;
             case 'lod0-context':
                 if (contextTileset) contextTileset.show = visible;

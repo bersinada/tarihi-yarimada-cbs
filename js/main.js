@@ -272,9 +272,9 @@ const App = (function() {
             const interior2Tileset = await CesiumViewer.loadFromIonAssetId(4275532, { zoomTo: false });
             state.loadedTilesets['4275532'] = interior2Tileset;
 
-            // Şadırvan (Asset ID: 4270998)
-            const sadirvanTileset = await CesiumViewer.loadFromIonAssetId(4270998, { zoomTo: false });
-            state.loadedTilesets['4270998'] = sadirvanTileset;
+            // Şadırvan (Asset ID: 4277312)
+            const sadirvanTileset = await CesiumViewer.loadFromIonAssetId(4277312, { zoomTo: false });
+            state.loadedTilesets['4277312'] = sadirvanTileset;
             
             // Model etrafında orbit modunu aktifleştir
             updateLoadingStatus('Orbit modu ayarlanıyor...');
