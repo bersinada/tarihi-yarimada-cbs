@@ -25,7 +25,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Database imports
-from database import (
+from backend.database import (
     init_db, get_db, engine,
     Yapi as DBYapi,
     YapiMetadata as DBYapiMetadata,
