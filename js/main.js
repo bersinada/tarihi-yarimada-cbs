@@ -260,17 +260,21 @@ const App = (function() {
             
             // Molla Hüsrev Camii 3D modellerini yükle
             updateLoadingStatus('3D modeller yükleniyor...');
-            
+
             // Dış cephe (Asset ID: 4270999)
             const exteriorTileset = await CesiumViewer.loadFromIonAssetId(4270999, { zoomTo: false });
             state.loadedTilesets['4270999'] = exteriorTileset;
-            
+
             // İç mekan modelleri (Asset ID: 4271001 ve 4275532)
             const interior1Tileset = await CesiumViewer.loadFromIonAssetId(4271001, { zoomTo: false });
             state.loadedTilesets['4271001'] = interior1Tileset;
-            
+
             const interior2Tileset = await CesiumViewer.loadFromIonAssetId(4275532, { zoomTo: false });
             state.loadedTilesets['4275532'] = interior2Tileset;
+
+            // Şadırvan (Asset ID: 4270998)
+            const sadirvanTileset = await CesiumViewer.loadFromIonAssetId(4270998, { zoomTo: false });
+            state.loadedTilesets['4270998'] = sadirvanTileset;
             
             // Model etrafında orbit modunu aktifleştir
             updateLoadingStatus('Orbit modu ayarlanıyor...');
