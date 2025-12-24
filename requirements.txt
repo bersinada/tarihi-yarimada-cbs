@@ -27,3 +27,6 @@ python-dotenv==1.0.0
 # ASGI Server
 aiofiles==23.2.1
 
+# Development
+pytest==7.4.4
+httpx==0.26.0
