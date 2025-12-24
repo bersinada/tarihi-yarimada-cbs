@@ -15,7 +15,9 @@ const App = (function() {
         potreeReady: false,
         orbitLocked: false, // Orbit kilidi durumu
         currentYapiId: 1, // Varsayılan yapı ID (Molla Hüsrev Camii)
-        notes: [] // Kayıtlı notlar
+        notes: [], // Kayıtlı notlar
+        interiorMode: false, // İç mekan modu aktif mi?
+        interiorIonAssetId: null // İç mekan 3D Tiles asset ID (varsa)
     };
 
     // DOM elementleri
@@ -108,6 +110,9 @@ const App = (function() {
         elements.btnRefreshNotes = document.getElementById('btn-refresh-notes');
         elements.notesCountNumber = document.getElementById('notes-count-number');
         elements.notesItems = document.getElementById('notes-items');
+        
+        // Interior Navigation elements
+        elements.btnEnterInterior = document.getElementById('btn-enter-interior');
     }
 
     /**
@@ -230,6 +235,11 @@ const App = (function() {
         if (elements.btnRefreshNotes) {
             elements.btnRefreshNotes.addEventListener('click', loadNotes);
         }
+        
+        // Interior Navigation - İç Mekana Giriş Butonu
+        if (elements.btnEnterInterior) {
+            elements.btnEnterInterior.addEventListener('click', handleEnterInterior);
+        }
     }
 
     /**
@@ -246,9 +256,12 @@ const App = (function() {
             // FPS sayacını başlat
             CesiumViewer.startFPSCounter();
             
-            // Molla Hüsrev Camii 3D modelini yükle (Cesium Ion Asset ID: 4244767)
+            // Molla Hüsrev Camii 3D modelini yükle (Cesium Ion Asset ID: 4270999)
             updateLoadingStatus('3D model yükleniyor...');
             await CesiumViewer.loadFromIonAssetId(4270999);
+            await CesiumViewer.loadFromIonAssetId(4271001);
+            await CesiumViewer.loadFromIonAssetId(4275532);
+
             
             // Model etrafında orbit modunu aktifleştir
             updateLoadingStatus('Orbit modu ayarlanıyor...');
@@ -796,6 +809,72 @@ const App = (function() {
         }, 3000);
     }
 
+    // ============================================
+    // İÇ MEKAN NAVİGASYON İşlevleri
+    // ============================================
+
+    /**
+     * İç mekana giriş
+     */
+    async function handleEnterInterior() {
+        if (!state.cesiumReady) {
+            showToast('Cesium Viewer henüz hazır değil', 'error');
+            return;
+        }
+
+        // Interior Navigation modülünü başlat (eğer yoksa)
+        if (typeof InteriorNavigation !== 'undefined') {
+            const viewer = CesiumViewer.getViewer();
+            
+            // Modülü başlat
+            if (!InteriorNavigation.isInsideMode()) {
+                InteriorNavigation.initialize(viewer);
+            }
+            
+            // İç mekan moduna gir
+            await InteriorNavigation.enterInterior(state.currentYapiId, state.interiorIonAssetId);
+            
+            state.interiorMode = true;
+            
+            // Giriş butonunu gizle
+            if (elements.btnEnterInterior) {
+                elements.btnEnterInterior.classList.add('hidden');
+            }
+            
+            // Location badge güncelle
+            const badge = document.querySelector('.viewer-overlay .location-text');
+            if (badge) {
+                badge.textContent = 'Molla Hüsrev Camii - İç Mekan Gezintisi';
+            }
+            
+            showToast('İç mekan moduna geçildi. İyi gezintiler! 🏛️', 'success');
+        } else {
+            console.warn('InteriorNavigation modülü yüklenmedi');
+            showToast('İç mekan modülü yüklenemedi', 'error');
+        }
+    }
+
+    /**
+     * İç mekandan çıkış (public API için)
+     */
+    function handleExitInterior() {
+        if (typeof InteriorNavigation !== 'undefined' && InteriorNavigation.isInsideMode()) {
+            InteriorNavigation.exitInterior();
+            state.interiorMode = false;
+            
+            // Giriş butonunu göster
+            if (elements.btnEnterInterior) {
+                elements.btnEnterInterior.classList.remove('hidden');
+            }
+            
+            // Location badge güncelle
+            const badge = document.querySelector('.viewer-overlay .location-text');
+            if (badge) {
+                badge.textContent = 'Molla Hüsrev Camii - Dış Cephe';
+            }
+        }
+    }
+
     /**
      * Kalite değişikliği
      */
@@ -896,7 +975,12 @@ const App = (function() {
         
         // Modals
         openModal,
-        closeAllModals
+        closeAllModals,
+        
+        // Interior Navigation
+        enterInterior: handleEnterInterior,
+        exitInterior: handleExitInterior,
+        isInteriorMode: () => state.interiorMode
     };
 })();
 

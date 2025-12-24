@@ -85,8 +85,8 @@ def migrate():
             tur="Cami",
             donem="Osmanli",
             mimar="Bilinmiyor",
-            yapim_yili="1475-1476",
-            konum="Molla Husrev, Fatih",
+            yapim_yili="1460",
+            konum="Vefa, Fatih",
             ilce="Fatih",
             aciklama="Fatih doneminde Seyhulislam Molla Husrev tarafindan yaptirilmis tarihi cami."
         )
@@ -98,19 +98,19 @@ def migrate():
         # Metadata
         metadata = YapiMetadata(
             yapi_id=yapi.id,
-            tileset_url="cesium_ion:4244767",
+            tileset_url="cesium_ion:4270999",
             nokta_bulutu_url="/data/pointcloud/molla-husrev/metadata.json",
             lod_seviyesi=3,
             nokta_sayisi=15000000,
-            dosya_boyutu_mb=250.5
+            dosya_boyutu_mb=1920.0
         )
         session.add(metadata)
         print("[OK] Metadata eklendi")
         
         # Katmanlar
         katmanlar = [
-            Katman(ad="Molla Husrev - Dis Cephe", tur="3dtiles", url="cesium_ion:4244767", gorunur=True, saydamlik=1.0, sira=1),
-            Katman(ad="Molla Husrev - Ic Mekan", tur="pointcloud", url="/data/pointcloud/molla-husrev/metadata.json", gorunur=True, saydamlik=1.0, sira=2),
+            Katman(ad="Molla Husrev - Dis Cephe", tur="3dtiles", url="cesium_ion:4270999", gorunur=True, saydamlik=1.0, sira=1),
+            Katman(ad="Molla Husrev - Ic Mekan", tur="3dtiles", url="/data/pointcloud/molla-husrev/metadata.json", gorunur=True, saydamlik=1.0, sira=2),
             Katman(ad="Cevre LoD0 Modeli", tur="3dtiles", url="/data/3dtiles/context/tileset.json", gorunur=True, saydamlik=0.8, sira=3),
         ]
         for k in katmanlar:

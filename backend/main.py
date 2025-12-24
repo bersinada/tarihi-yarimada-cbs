@@ -30,7 +30,9 @@ from backend.database import (
     Yapi as DBYapi,
     YapiMetadata as DBYapiMetadata,
     Katman as DBKatman,
-    Aciklama as DBAciklama
+    Aciklama as DBAciklama,
+    IcMekanBolge as DBIcMekanBolge,
+    Metadata as DBMetadata
 )
 
 
@@ -176,18 +178,26 @@ class AciklamaResponse(BaseModel):
 # ============================================
 
 def yapi_to_response(yapi: DBYapi) -> dict:
-    """DBYapi'yi response formatına çevir"""
+    """DBYapi'yi response formatına çevir (TÜCBS uyumlu)"""
     return {
         "id": yapi.id,
-        "ad": yapi.ad,
+        "ad": getattr(yapi, 'bina_adi', None) or getattr(yapi, 'ad', None),
+        "bina_adi": getattr(yapi, 'bina_adi', None) or getattr(yapi, 'ad', None),
         "ad_en": yapi.ad_en,
         "tur": yapi.tur,
+        "yapi_turu": getattr(yapi, 'yapi_turu', None),
         "donem": yapi.donem,
         "mimar": yapi.mimar,
-        "yapim_yili": yapi.yapim_yili,
+        "yapim_yili": getattr(yapi, 'insaat_tarihi', None) or getattr(yapi, 'yapim_yili', None),
+        "insaat_tarihi": getattr(yapi, 'insaat_tarihi', None) or getattr(yapi, 'yapim_yili', None),
         "konum": yapi.konum,
         "ilce": yapi.ilce,
-        "aciklama": yapi.aciklama
+        "aciklama": yapi.aciklama,
+        # INSPIRE/TÜCBS ek alanlar
+        "lod_seviyesi": getattr(yapi, 'lod_seviyesi', None),
+        "building_nature": getattr(yapi, 'building_nature', None),
+        "koruma_grubu": getattr(yapi, 'koruma_grubu', None),
+        "land_cover_code": getattr(yapi, 'land_cover_code', None)
     }
 
 
@@ -463,14 +473,229 @@ async def get_aciklamalar(yapi_id: int, db: Session = Depends(get_db)):
 
 
 # ============================================
+# İÇ MEKAN BÖLGELERİ Endpoints
+# ============================================
+
+class IcMekanBolgeResponse(BaseModel):
+    """İç mekan bölge response modeli"""
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    yapi_id: Optional[int] = None
+    bolge_adi: str
+    bolge_adi_en: Optional[str] = None
+    bolge_turu: Optional[str] = None
+    aciklama: Optional[str] = None
+    giris_noktasi: bool = False
+    siralama: int = 0
+    gezinti_suresi: int = 5
+    kamera_lon: Optional[float] = None
+    kamera_lat: Optional[float] = None
+    kamera_height: Optional[float] = None
+    kamera_heading: Optional[float] = 0
+    kamera_pitch: Optional[float] = -30
+    kamera_roll: Optional[float] = 0
+    hedef_lon: Optional[float] = None
+    hedef_lat: Optional[float] = None
+    hedef_height: Optional[float] = None
+
+
+@app.get("/api/v1/yapilar/{yapi_id}/ic-mekan-bolgeler", response_model=List[IcMekanBolgeResponse])
+async def get_ic_mekan_bolgeler(yapi_id: int, db: Session = Depends(get_db)):
+    """Yapının iç mekan bölgelerini getir"""
+    try:
+        # Raw SQL ile geometri değerlerini çıkar
+        from sqlalchemy import text
+        query = text("""
+            SELECT 
+                id, yapi_id, bolge_adi, bolge_adi_en, bolge_turu, aciklama,
+                giris_noktasi, siralama, gezinti_suresi,
+                ST_X(kamera_pozisyon) as kamera_lon,
+                ST_Y(kamera_pozisyon) as kamera_lat,
+                ST_Z(kamera_pozisyon) as kamera_height,
+                kamera_heading, kamera_pitch, kamera_roll,
+                ST_X(kamera_hedef) as hedef_lon,
+                ST_Y(kamera_hedef) as hedef_lat,
+                ST_Z(kamera_hedef) as hedef_height
+            FROM ic_mekan_bolge
+            WHERE yapi_id = :yapi_id
+            ORDER BY siralama
+        """)
+        result = db.execute(query, {"yapi_id": yapi_id})
+        bolgeler = result.fetchall()
+        
+        return [
+            {
+                "id": b.id,
+                "yapi_id": b.yapi_id,
+                "bolge_adi": b.bolge_adi,
+                "bolge_adi_en": b.bolge_adi_en,
+                "bolge_turu": b.bolge_turu,
+                "aciklama": b.aciklama,
+                "giris_noktasi": b.giris_noktasi,
+                "siralama": b.siralama,
+                "gezinti_suresi": b.gezinti_suresi,
+                "kamera_lon": float(b.kamera_lon) if b.kamera_lon else None,
+                "kamera_lat": float(b.kamera_lat) if b.kamera_lat else None,
+                "kamera_height": float(b.kamera_height) if b.kamera_height else None,
+                "kamera_heading": float(b.kamera_heading) if b.kamera_heading else 0,
+                "kamera_pitch": float(b.kamera_pitch) if b.kamera_pitch else -30,
+                "kamera_roll": float(b.kamera_roll) if b.kamera_roll else 0,
+                "hedef_lon": float(b.hedef_lon) if b.hedef_lon else None,
+                "hedef_lat": float(b.hedef_lat) if b.hedef_lat else None,
+                "hedef_height": float(b.hedef_height) if b.hedef_height else None
+            }
+            for b in bolgeler
+        ]
+    except Exception as e:
+        print(f"İç mekan bölgeleri yüklenirken hata: {e}")
+        return []
+
+
+@app.get("/api/v1/yapilar/{yapi_id}/ic-mekan-giris")
+async def get_ic_mekan_giris(yapi_id: int, db: Session = Depends(get_db)):
+    """Yapının iç mekan giriş noktasını getir"""
+    try:
+        from sqlalchemy import text
+        query = text("""
+            SELECT 
+                id, bolge_adi,
+                ST_X(kamera_pozisyon) as lon,
+                ST_Y(kamera_pozisyon) as lat,
+                ST_Z(kamera_pozisyon) as height,
+                kamera_heading as heading,
+                kamera_pitch as pitch
+            FROM ic_mekan_bolge
+            WHERE yapi_id = :yapi_id AND giris_noktasi = TRUE
+            ORDER BY siralama
+            LIMIT 1
+        """)
+        result = db.execute(query, {"yapi_id": yapi_id})
+        giris = result.fetchone()
+        
+        if not giris:
+            raise HTTPException(status_code=404, detail="Giriş noktası bulunamadı")
+        
+        return {
+            "bolge_id": giris.id,
+            "bolge_adi": giris.bolge_adi,
+            "lon": float(giris.lon) if giris.lon else None,
+            "lat": float(giris.lat) if giris.lat else None,
+            "height": float(giris.height) if giris.height else None,
+            "heading": float(giris.heading) if giris.heading else 0,
+            "pitch": float(giris.pitch) if giris.pitch else -15
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Giriş noktası yüklenirken hata: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================
+# INSPIRE/TÜCBS Uyumlu Endpoints
+# ============================================
+
+@app.get("/api/v1/inspire/buildings")
+async def get_inspire_buildings(db: Session = Depends(get_db)):
+    """INSPIRE Buildings formatında yapıları getir"""
+    try:
+        from sqlalchemy import text
+        query = text("""
+            SELECT * FROM v_inspire_buildings
+        """)
+        result = db.execute(query)
+        buildings = result.fetchall()
+        
+        return {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "id": b.inspire_id if hasattr(b, 'inspire_id') else f"TR.TUCBS.BINA.{b.id}",
+                    "properties": {
+                        "inspireId": b.inspire_id if hasattr(b, 'inspire_id') else None,
+                        "name": b.name if hasattr(b, 'name') else b.bina_adi,
+                        "buildingNature": b.building_nature if hasattr(b, 'building_nature') else None,
+                        "lodLevel": b.lod_seviyesi if hasattr(b, 'lod_seviyesi') else None,
+                        "heightAboveGround": float(b.height_above_ground) if hasattr(b, 'height_above_ground') and b.height_above_ground else None,
+                        "numberOfFloorsAboveGround": b.number_of_floors_above_ground if hasattr(b, 'number_of_floors_above_ground') else None
+                    }
+                }
+                for b in buildings
+            ]
+        }
+    except Exception as e:
+        print(f"INSPIRE buildings yüklenirken hata: {e}")
+        # View yoksa normal yapi tablosundan döndür
+        yapilar = db.query(DBYapi).all()
+        return {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "id": f"TR.TUCBS.BINA.{y.id}",
+                    "properties": {
+                        "name": y.bina_adi if hasattr(y, 'bina_adi') else y.ad,
+                        "buildingNature": y.building_nature if hasattr(y, 'building_nature') else None,
+                        "lodLevel": y.lod_seviyesi if hasattr(y, 'lod_seviyesi') else None
+                    }
+                }
+                for y in yapilar
+            ]
+        }
+
+
+@app.get("/api/v1/tucbs/binalar")
+async def get_tucbs_binalar(db: Session = Depends(get_db)):
+    """TÜCBS Bina Teması formatında yapıları getir"""
+    try:
+        from sqlalchemy import text
+        query = text("""
+            SELECT * FROM v_tucbs_binalar
+        """)
+        result = db.execute(query)
+        binalar = result.fetchall()
+        
+        return {
+            "binalar": [
+                {
+                    "id": b.id,
+                    "bina_adi": b.bina_adi,
+                    "yapi_turu": b.yapi_turu,
+                    "yapi_durumu": b.yapi_durumu,
+                    "bina_yuksekligi": float(b.bina_yuksekligi) if b.bina_yuksekligi else None,
+                    "kat_sayisi": b.kat_sayisi,
+                    "insaat_tarihi": b.insaat_tarihi,
+                    "tescil_no": b.tescil_no,
+                    "koruma_grubu": b.koruma_grubu,
+                    "mulkiyet_durumu": b.mulkiyet_durumu,
+                    "mahalle": b.mahalle,
+                    "ilce": b.ilce,
+                    "land_cover_code": b.land_cover_code
+                }
+                for b in binalar
+            ]
+        }
+    except Exception as e:
+        print(f"TÜCBS binalar yüklenirken hata: {e}")
+        # View yoksa normal yapi tablosundan döndür
+        yapilar = db.query(DBYapi).all()
+        return {
+            "binalar": [yapi_to_response(y) for y in yapilar]
+        }
+
+
+# ============================================
 # Geocoding Endpoint
 # ============================================
 
 @app.get("/api/v1/ara")
 async def geocode(q: str, db: Session = Depends(get_db)):
     """Coğrafi arama"""
+    # Önce bina_adi ile ara, sonra ad ile
     yapilar = db.query(DBYapi).filter(
-        DBYapi.ad.ilike(f"%{q}%")
+        DBYapi.bina_adi.ilike(f"%{q}%") if hasattr(DBYapi, 'bina_adi') else DBYapi.ad.ilike(f"%{q}%")
     ).all()
     return {"sonuclar": [yapi_to_response(y) for y in yapilar]}
 
