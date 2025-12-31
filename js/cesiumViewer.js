@@ -20,16 +20,16 @@ const CesiumViewer = (function() {
         height: 100
     };
 
-    // Default kamera pozisyonu
+    // Default kamera pozisyonu (optimize edilmiş - modele daha yakın)
     const DEFAULT_CAMERA = {
         destination: Cesium.Cartesian3.fromDegrees(
             MOLLA_HUSREV_LOCATION.longitude,
-            MOLLA_HUSREV_LOCATION.latitude - 0.002,
-            MOLLA_HUSREV_LOCATION.height + 150
+            MOLLA_HUSREV_LOCATION.latitude - 0.001,
+            MOLLA_HUSREV_LOCATION.height + 80
         ),
         orientation: {
             heading: Cesium.Math.toRadians(0),
-            pitch: Cesium.Math.toRadians(-35),
+            pitch: Cesium.Math.toRadians(-40),
             roll: 0.0
         }
     };
@@ -39,7 +39,7 @@ const CesiumViewer = (function() {
         shadows: true,
         terrainEnabled: false, // Terrain kapalı - model konumu değişmesin
         globeVisible: true, // Altlık harita görünürlüğü
-        quality: 'high', // Varsayılan kalite: Yüksek
+        quality: 'medium', // Varsayılan kalite: Orta (performans için)
         currentBasemap: 'satellite', // Varsayılan olarak uydu görüntüsü
         pointSize: 5 // Point cloud nokta boyutu
     };

@@ -17,7 +17,7 @@ const App = (function() {
         notes: [], // Kayıtlı notlar
         interiorMode: false, // İç mekan modu aktif mi?
         loadedTilesets: {}, // Yüklenen tilesetler: { assetId: tileset }
-        renderQuality: 'high' // Varsayılan render kalitesi
+        renderQuality: 'medium' // Varsayılan render kalitesi (performans için orta)
     };
 
     // DOM elementleri
