@@ -36,10 +36,10 @@ const CesiumViewer = (function() {
 
     // Ayarlar
     const settings = {
-        shadows: true,
+        shadows: false, // Gölgeler kapalı (performans için)
         terrainEnabled: false, // Terrain kapalı - model konumu değişmesin
         globeVisible: true, // Altlık harita görünürlüğü
-        quality: 'medium', // Varsayılan kalite: Orta (performans için)
+        quality: 'low', // Varsayılan kalite: Düşük (performans için)
         currentBasemap: 'satellite', // Varsayılan olarak uydu görüntüsü
         pointSize: 5 // Point cloud nokta boyutu
     };
@@ -609,13 +609,15 @@ const CesiumViewer = (function() {
      * Kamerayı modelin merkezine kilitler ve etrafında döndürme imkanı sağlar
      */
     function enableOrbitAroundModel() {
-        if (!currentTileset) {
-            console.warn('Tileset yüklenmemiş, orbit modu aktifleştirilemiyor');
+        // Dış cephe tileset'ini kullan (4270999)
+        const exteriorTileset = loadedTilesets['4270999'];
+        if (!exteriorTileset) {
+            console.warn('Dış cephe tileset yüklenmemiş, orbit modu aktifleştirilemiyor');
             return;
         }
 
         // Tileset'in bounding sphere'ini al
-        const boundingSphere = currentTileset.boundingSphere;
+        const boundingSphere = exteriorTileset.boundingSphere;
         if (!boundingSphere) {
             console.warn('Tileset bounding sphere bulunamadı');
             return;
@@ -663,31 +665,38 @@ const CesiumViewer = (function() {
      * Bu mod aktifken kamera sadece model etrafında döner
      */
     function lockOrbitToModel() {
-        if (!currentTileset) {
-            console.warn('Tileset yüklenmemiş');
+        // Dış cephe tileset'ini kullan (4270999)
+        const exteriorTileset = loadedTilesets['4270999'];
+        if (!exteriorTileset) {
+            console.warn('Dış cephe tileset yüklenmemiş');
             return;
         }
 
-        const boundingSphere = currentTileset.boundingSphere;
+        const boundingSphere = exteriorTileset.boundingSphere;
         if (!boundingSphere) return;
 
         const center = boundingSphere.center;
-        const radius = boundingSphere.radius;
+
+        // Mevcut kamera pozisyonunu al
+        const cameraPosition = viewer.camera.position;
+
+        // Kamera ile modelin merkezi arasındaki mesafeyi hesapla
+        const currentDistance = Cesium.Cartesian3.distance(cameraPosition, center);
 
         // Transform matrisini oluştur
         const transform = Cesium.Transforms.eastNorthUpToFixedFrame(center);
 
-        // Kamerayı bu transform'a kilitle
+        // Kamerayı bu transform'a kilitle - mevcut heading, pitch ve mesafeyi koru
         viewer.camera.lookAtTransform(
             transform,
             new Cesium.HeadingPitchRange(
                 viewer.camera.heading,
                 viewer.camera.pitch,
-                radius * 2.5
+                currentDistance // Mevcut mesafeyi koru
             )
         );
 
-        console.log('Kamera modele kilitlendi - Orbit modu aktif');
+        console.log('Kamera modele kilitlendi - Orbit modu aktif (mevcut pozisyondan)');
     }
 
     /**
