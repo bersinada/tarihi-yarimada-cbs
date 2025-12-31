@@ -48,15 +48,15 @@ const CesiumViewer = (function() {
     let loadedTilesets = {};
 
     // Altlık harita sağlayıcıları
-    // Terrain aktif tutulur (yeryüzü şekilleri), model height offset ile zemine oturur
+    // Düz zemin kullanılıyor (terrain devre dışı), modeller gerçek konumlarında görünüyor
     const basemapProviders = {
-        // Cesium Ion Uydu Görüntüsü + Terrain
+        // Cesium Ion Uydu Görüntüsü (Düz zemin)
         satellite: async () => {
             try {
-                // Terrain'i aktif tut - yeryüzü şekilleri için
-                viewer.terrainProvider = await Cesium.CesiumTerrainProvider.fromIonAssetId(1);
+                // Düz zemin kullan
+                viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
                 viewer.scene.globe.depthTestAgainstTerrain = false;
-                
+
                 // Uydu görüntüsü
                 return await Cesium.IonImageryProvider.fromAssetId(2);
             } catch (e) {
@@ -68,15 +68,12 @@ const CesiumViewer = (function() {
             }
         },
         
-        // OpenStreetMap - Sokak haritası + Terrain
+        // OpenStreetMap - Sokak haritası (Düz zemin)
         osm: async () => {
-            try {
-                viewer.terrainProvider = await Cesium.CesiumTerrainProvider.fromIonAssetId(1);
-            } catch (e) {
-                viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
-            }
+            // Düz zemin kullan
+            viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
             viewer.scene.globe.depthTestAgainstTerrain = false;
-            
+
             return new Cesium.UrlTemplateImageryProvider({
                 url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 credit: 'OpenStreetMap contributors',
@@ -84,15 +81,12 @@ const CesiumViewer = (function() {
             });
         },
         
-        // OpenTopoMap - Topografik harita + Terrain
+        // OpenTopoMap - Topografik harita (Düz zemin)
         openTopo: async () => {
-            try {
-                viewer.terrainProvider = await Cesium.CesiumTerrainProvider.fromIonAssetId(1);
-            } catch (e) {
-                viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
-            }
+            // Düz zemin kullan
+            viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
             viewer.scene.globe.depthTestAgainstTerrain = false;
-            
+
             return new Cesium.UrlTemplateImageryProvider({
                 url: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
                 credit: 'OpenTopoMap',
@@ -100,15 +94,12 @@ const CesiumViewer = (function() {
             });
         },
         
-        // Stamen Terrain - Görsel arazi haritası + Terrain
+        // Stamen Terrain - Görsel arazi haritası (Düz zemin)
         stamenTerrain: async () => {
-            try {
-                viewer.terrainProvider = await Cesium.CesiumTerrainProvider.fromIonAssetId(1);
-            } catch (e) {
-                viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
-            }
+            // Düz zemin kullan
+            viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
             viewer.scene.globe.depthTestAgainstTerrain = false;
-            
+
             return new Cesium.UrlTemplateImageryProvider({
                 url: 'https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}.png',
                 credit: 'Stamen Design',
@@ -116,15 +107,12 @@ const CesiumViewer = (function() {
             });
         },
         
-        // CartoDB Positron - Açık minimal + Terrain
+        // CartoDB Positron - Açık minimal (Düz zemin)
         cartoPositron: async () => {
-            try {
-                viewer.terrainProvider = await Cesium.CesiumTerrainProvider.fromIonAssetId(1);
-            } catch (e) {
-                viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
-            }
+            // Düz zemin kullan
+            viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
             viewer.scene.globe.depthTestAgainstTerrain = false;
-            
+
             return new Cesium.UrlTemplateImageryProvider({
                 url: 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
                 credit: 'CartoDB',
@@ -132,15 +120,12 @@ const CesiumViewer = (function() {
             });
         },
         
-        // CartoDB Dark Matter - Koyu tema + Terrain
+        // CartoDB Dark Matter - Koyu tema (Düz zemin)
         cartoDark: async () => {
-            try {
-                viewer.terrainProvider = await Cesium.CesiumTerrainProvider.fromIonAssetId(1);
-            } catch (e) {
-                viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
-            }
+            // Düz zemin kullan
+            viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
             viewer.scene.globe.depthTestAgainstTerrain = false;
-            
+
             return new Cesium.UrlTemplateImageryProvider({
                 url: 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
                 credit: 'CartoDB',
@@ -148,15 +133,12 @@ const CesiumViewer = (function() {
             });
         },
         
-        // CartoDB Voyager - Renkli detaylı + Terrain
+        // CartoDB Voyager - Renkli detaylı (Düz zemin)
         cartoVoyager: async () => {
-            try {
-                viewer.terrainProvider = await Cesium.CesiumTerrainProvider.fromIonAssetId(1);
-            } catch (e) {
-                viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
-            }
+            // Düz zemin kullan
+            viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
             viewer.scene.globe.depthTestAgainstTerrain = false;
-            
+
             return new Cesium.UrlTemplateImageryProvider({
                 url: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
                 credit: 'CartoDB',
@@ -279,18 +261,10 @@ const CesiumViewer = (function() {
                 );
             }
             
-            // Cesium World Terrain - Yeryüzü şekilleri için
-            try {
-                viewer.terrainProvider = await Cesium.CesiumTerrainProvider.fromIonAssetId(1);
-                // depthTestAgainstTerrain = false: Model terrain'in altında KALMAZ
-                // Model kendi height offset'i ile zemine oturacak
-                viewer.scene.globe.depthTestAgainstTerrain = false;
-                console.log('Cesium World Terrain yüklendi (yeryüzü şekilleri aktif)');
-            } catch (e) {
-                console.warn('Terrain yüklenemedi, düz zemin kullanılıyor:', e);
-                viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
-                viewer.scene.globe.depthTestAgainstTerrain = false;
-            }
+            // Düz zemin kullan (terrain devre dışı)
+            viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
+            viewer.scene.globe.depthTestAgainstTerrain = false;
+            console.log('Düz zemin kullanılıyor (terrain devre dışı)');
 
             // Scene ayarları
             configureScene();
@@ -463,12 +437,12 @@ const CesiumViewer = (function() {
 
     // Model yükseklik offset'leri (metre cinsinden)
     // Pozitif = yukarı, Negatif = aşağı
-    // Terrain üzerinde görünmesi için ayarlanmış değerler
+    // Düz harita için offset'ler sıfırlandı
     const MODEL_HEIGHT_OFFSETS = {
-        '4270999': 78.5,  // Dış cephe - terrain üzerine çıksın
-        '4271001': 80,    // İç mekan 1
-        '4275532': 80,    // İç mekan 2
-        '4277312': 78.5   // Şadırvan
+        '4270999': 0,  // Dış cephe
+        '4271001': 0,  // İç mekan 1
+        '4275532': 0,  // İç mekan 2
+        '4277312': 0   // Şadırvan
     };
 
     /**
