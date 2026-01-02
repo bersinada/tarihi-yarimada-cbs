@@ -20,43 +20,52 @@ const CesiumViewer = (function() {
         height: 100
     };
 
-    // Default kamera pozisyonu (optimize edilmiş - modele daha yakın)
+    // Default kamera pozisyonu
     const DEFAULT_CAMERA = {
         destination: Cesium.Cartesian3.fromDegrees(
             MOLLA_HUSREV_LOCATION.longitude,
-            MOLLA_HUSREV_LOCATION.latitude - 0.001,
-            MOLLA_HUSREV_LOCATION.height + 80
+            MOLLA_HUSREV_LOCATION.latitude - 0.002,
+            MOLLA_HUSREV_LOCATION.height + 150
         ),
         orientation: {
             heading: Cesium.Math.toRadians(0),
-            pitch: Cesium.Math.toRadians(-40),
+            pitch: Cesium.Math.toRadians(-35),
             roll: 0.0
         }
     };
 
     // Ayarlar
     const settings = {
-        shadows: false, // Gölgeler kapalı (performans için)
+        shadows: true,
         terrainEnabled: false, // Terrain kapalı - model konumu değişmesin
         globeVisible: true, // Altlık harita görünürlüğü
-        quality: 'low', // Varsayılan kalite: Düşük (performans için)
+        quality: 'high', // Varsayılan kalite: Yüksek
         currentBasemap: 'satellite', // Varsayılan olarak uydu görüntüsü
         pointSize: 5 // Point cloud nokta boyutu
     };
     
     // Yüklenen tüm tilesetler (asset ID -> tileset)
     let loadedTilesets = {};
+    
+    // Model yükseklik offset'leri (metre cinsinden)
+    // Pozitif = yukarı, Negatif = aşağı
+    const MODEL_HEIGHT_OFFSETS = {
+        '4270999': 0,  // Dış cephe
+        '4271001': 0,  // İç mekan 1
+        '4275532': 0,  // İç mekan 2
+        '4277312': 0   // Şadırvan
+    };
 
     // Altlık harita sağlayıcıları
-    // Düz zemin kullanılıyor (terrain devre dışı), modeller gerçek konumlarında görünüyor
+    // Düz yüzeyli altlık harita (terrain kapalı)
     const basemapProviders = {
-        // Cesium Ion Uydu Görüntüsü (Düz zemin)
+        // Cesium Ion Uydu Görüntüsü - Düz yüzeyli
         satellite: async () => {
             try {
-                // Düz zemin kullan
+                // Düz yüzeyli altlık harita
                 viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
                 viewer.scene.globe.depthTestAgainstTerrain = false;
-
+                
                 // Uydu görüntüsü
                 return await Cesium.IonImageryProvider.fromAssetId(2);
             } catch (e) {
@@ -68,12 +77,11 @@ const CesiumViewer = (function() {
             }
         },
         
-        // OpenStreetMap - Sokak haritası (Düz zemin)
+        // OpenStreetMap - Sokak haritası - Düz yüzeyli
         osm: async () => {
-            // Düz zemin kullan
             viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
             viewer.scene.globe.depthTestAgainstTerrain = false;
-
+            
             return new Cesium.UrlTemplateImageryProvider({
                 url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 credit: 'OpenStreetMap contributors',
@@ -81,12 +89,11 @@ const CesiumViewer = (function() {
             });
         },
         
-        // OpenTopoMap - Topografik harita (Düz zemin)
+        // OpenTopoMap - Topografik harita - Düz yüzeyli
         openTopo: async () => {
-            // Düz zemin kullan
             viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
             viewer.scene.globe.depthTestAgainstTerrain = false;
-
+            
             return new Cesium.UrlTemplateImageryProvider({
                 url: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
                 credit: 'OpenTopoMap',
@@ -94,12 +101,11 @@ const CesiumViewer = (function() {
             });
         },
         
-        // Stamen Terrain - Görsel arazi haritası (Düz zemin)
+        // Stamen Terrain - Görsel arazi haritası - Düz yüzeyli
         stamenTerrain: async () => {
-            // Düz zemin kullan
             viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
             viewer.scene.globe.depthTestAgainstTerrain = false;
-
+            
             return new Cesium.UrlTemplateImageryProvider({
                 url: 'https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}.png',
                 credit: 'Stamen Design',
@@ -107,12 +113,11 @@ const CesiumViewer = (function() {
             });
         },
         
-        // CartoDB Positron - Açık minimal (Düz zemin)
+        // CartoDB Positron - Açık minimal - Düz yüzeyli
         cartoPositron: async () => {
-            // Düz zemin kullan
             viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
             viewer.scene.globe.depthTestAgainstTerrain = false;
-
+            
             return new Cesium.UrlTemplateImageryProvider({
                 url: 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
                 credit: 'CartoDB',
@@ -120,12 +125,11 @@ const CesiumViewer = (function() {
             });
         },
         
-        // CartoDB Dark Matter - Koyu tema (Düz zemin)
+        // CartoDB Dark Matter - Koyu tema - Düz yüzeyli
         cartoDark: async () => {
-            // Düz zemin kullan
             viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
             viewer.scene.globe.depthTestAgainstTerrain = false;
-
+            
             return new Cesium.UrlTemplateImageryProvider({
                 url: 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
                 credit: 'CartoDB',
@@ -133,12 +137,11 @@ const CesiumViewer = (function() {
             });
         },
         
-        // CartoDB Voyager - Renkli detaylı (Düz zemin)
+        // CartoDB Voyager - Renkli detaylı - Düz yüzeyli
         cartoVoyager: async () => {
-            // Düz zemin kullan
             viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
             viewer.scene.globe.depthTestAgainstTerrain = false;
-
+            
             return new Cesium.UrlTemplateImageryProvider({
                 url: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
                 credit: 'CartoDB',
@@ -261,10 +264,10 @@ const CesiumViewer = (function() {
                 );
             }
             
-            // Düz zemin kullan (terrain devre dışı)
+            // Düz yüzeyli altlık harita (terrain yok)
             viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
             viewer.scene.globe.depthTestAgainstTerrain = false;
-            console.log('Düz zemin kullanılıyor (terrain devre dışı)');
+            console.log('Düz yüzeyli altlık harita aktif (terrain kapalı)');
 
             // Scene ayarları
             configureScene();
@@ -435,16 +438,7 @@ const CesiumViewer = (function() {
         console.log(`Model height offset uygulandı: ${heightOffset}m`);
     }
 
-    // Model yükseklik offset'leri (metre cinsinden)
-    // Pozitif = yukarı, Negatif = aşağı
-    // Düz harita için offset'ler sıfırlandı
-    const MODEL_HEIGHT_OFFSETS = {
-        '4270999': 0,  // Dış cephe
-        '4271001': 0,  // İç mekan 1
-        '4275532': 0,  // İç mekan 2
-        '4277312': 0   // Şadırvan
-    };
-
+    
     /**
      * Cesium Ion Asset ID ile 3D Tileset yükle
      * @param {number} assetId - Cesium Ion Asset ID (ör: 2866823)
@@ -471,8 +465,8 @@ const CesiumViewer = (function() {
 
             viewer.scene.primitives.add(tileset);
             
-            // Modelin her zaman görünür olmasını sağla
-            tileset.show = true;
+            // Görünürlük ayarı (varsayılan: true, options'dan override edilebilir)
+            tileset.show = options.show !== undefined ? options.show : true;
             
             // Modeli zemine oturtmak için height offset uygula
             const heightOffset = MODEL_HEIGHT_OFFSETS[assetId.toString()] || 0;
@@ -483,12 +477,21 @@ const CesiumViewer = (function() {
             // Tileset'i kaydet
             loadedTilesets[assetId.toString()] = tileset;
             
+            // Dış cephe (4270999) yüklenirse currentTileset olarak ayarla
+            // Bu, orbit modunda doğru merkezi seçmek için önemli
+            if (assetId.toString() === '4270999') {
+                currentTileset = tileset;
+                console.log('Dış cephe katmanı currentTileset olarak ayarlandı');
+            } else if (!currentTileset) {
+                // Eğer currentTileset yoksa, ilk yüklenen tileset'i ayarla
+                currentTileset = tileset;
+            }
+            
             // Tileset yüklendiğinde kamerası yakınlaştır
             if (options.zoomTo !== false) {
                 await viewer.zoomTo(tileset);
             }
 
-            currentTileset = tileset;
             console.log('Cesium Ion Asset başarıyla yüklendi, ID:', assetId);
             
             return tileset;
@@ -607,17 +610,61 @@ const CesiumViewer = (function() {
     /**
      * Model etrafında orbit modunu aktifleştir
      * Kamerayı modelin merkezine kilitler ve etrafında döndürme imkanı sağlar
+     * Öncelik: Dış cephe (4270999) > Diğer katmanlar
      */
     function enableOrbitAroundModel() {
-        // Dış cephe tileset'ini kullan (4270999)
-        const exteriorTileset = loadedTilesets['4270999'];
-        if (!exteriorTileset) {
-            console.warn('Dış cephe tileset yüklenmemiş, orbit modu aktifleştirilemiyor');
+        // Öncelik: Dış cephe katmanını (4270999) bul
+        const PRIMARY_ASSET_ID = '4270999'; // Dış cephe - Ana camii
+        
+        let tileset = null;
+        
+        // 1. Önce dış cephe katmanını (4270999) yüklü tilesetlerden ara
+        if (loadedTilesets[PRIMARY_ASSET_ID]) {
+            tileset = loadedTilesets[PRIMARY_ASSET_ID];
+            console.log('enableOrbitAroundModel: Dış cephe katmanı (4270999) bulundu');
+        }
+        
+        // 2. Scene'deki primitives'lerden dış cephe katmanını ara
+        if (!tileset) {
+            const primitives = viewer.scene.primitives;
+            for (let i = 0; i < primitives.length; i++) {
+                const primitive = primitives.get(i);
+                if (primitive && primitive.isCesium3DTileset) {
+                    const primitiveAssetId = primitive._assetId || primitive.assetId;
+                    if (primitiveAssetId && primitiveAssetId.toString() === PRIMARY_ASSET_ID) {
+                        tileset = primitive;
+                        console.log('enableOrbitAroundModel: Scene\'de dış cephe katmanı (4270999) bulundu');
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // 3. Dış cephe bulunamazsa, currentTileset'i dene
+        if (!tileset && currentTileset) {
+            tileset = currentTileset;
+            console.log('enableOrbitAroundModel: currentTileset kullanılıyor');
+        }
+        
+        // 4. Hala yoksa, loadedTilesets'ten şadırvan hariç ilkini al
+        if (!tileset) {
+            const tilesetKeys = Object.keys(loadedTilesets);
+            if (tilesetKeys.length > 0) {
+                const nonSadirvanKeys = tilesetKeys.filter(key => key !== '4277312');
+                if (nonSadirvanKeys.length > 0) {
+                    tileset = loadedTilesets[nonSadirvanKeys[0]];
+                    console.log('enableOrbitAroundModel: loadedTilesets\'ten tileset kullanılıyor:', nonSadirvanKeys[0]);
+                }
+            }
+        }
+        
+        if (!tileset) {
+            console.warn('Tileset yüklenmemiş, orbit modu aktifleştirilemiyor');
             return;
         }
 
         // Tileset'in bounding sphere'ini al
-        const boundingSphere = exteriorTileset.boundingSphere;
+        const boundingSphere = tileset.boundingSphere;
         if (!boundingSphere) {
             console.warn('Tileset bounding sphere bulunamadı');
             return;
@@ -657,46 +704,123 @@ const CesiumViewer = (function() {
         // lookAt kilitlemesini kaldır ama merkez etrafında orbit için ayarı koru
         viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
 
-        console.log('Orbit modu aktifleştirildi - Model merkezine odaklandı');
+        console.log('Orbit modu aktifleştirildi - Dış cephe merkezine odaklandı');
     }
 
     /**
      * Model etrafında orbit - merkeze kilitle
      * Bu mod aktifken kamera sadece model etrafında döner
+     * Öncelik: Dış cephe (4270999) > Diğer katmanlar
      */
     function lockOrbitToModel() {
-        // Dış cephe tileset'ini kullan (4270999)
-        const exteriorTileset = loadedTilesets['4270999'];
-        if (!exteriorTileset) {
-            console.warn('Dış cephe tileset yüklenmemiş');
+        // Öncelik: Dış cephe katmanını (4270999) bul
+        // Bu ana camii modeli, orbit modunda merkeze alınmalı
+        const PRIMARY_ASSET_ID = '4270999'; // Dış cephe - Ana camii
+        
+        let tileset = null;
+        
+        // 1. Önce dış cephe katmanını (4270999) yüklü tilesetlerden ara
+        if (loadedTilesets[PRIMARY_ASSET_ID]) {
+            tileset = loadedTilesets[PRIMARY_ASSET_ID];
+            console.log('Dış cephe katmanı (4270999) bulundu, orbit merkezi olarak kullanılıyor');
+        }
+        
+        // 2. Scene'deki primitives'lerden dış cephe katmanını ara
+        if (!tileset) {
+            const primitives = viewer.scene.primitives;
+            for (let i = 0; i < primitives.length; i++) {
+                const primitive = primitives.get(i);
+                if (primitive && primitive.isCesium3DTileset) {
+                    // Asset ID'yi kontrol et
+                    const primitiveAssetId = primitive._assetId || primitive.assetId;
+                    if (primitiveAssetId && primitiveAssetId.toString() === PRIMARY_ASSET_ID) {
+                        tileset = primitive;
+                        console.log('Scene\'de dış cephe katmanı (4270999) bulundu');
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // 3. Dış cephe bulunamazsa, currentTileset'i dene
+        if (!tileset && currentTileset) {
+            tileset = currentTileset;
+            console.log('currentTileset kullanılıyor');
+        }
+        
+        // 4. Hala yoksa, loadedTilesets'ten ilkini al (dış cephe olmayabilir)
+        if (!tileset) {
+            const tilesetKeys = Object.keys(loadedTilesets);
+            if (tilesetKeys.length > 0) {
+                // Şadırvan (4277312) hariç tut - öncelik dış cephe ve iç mekanlarda
+                const nonSadirvanKeys = tilesetKeys.filter(key => key !== '4277312');
+                if (nonSadirvanKeys.length > 0) {
+                    tileset = loadedTilesets[nonSadirvanKeys[0]];
+                    console.log('loadedTilesets\'ten tileset kullanılıyor (şadırvan hariç):', nonSadirvanKeys[0]);
+                } else if (tilesetKeys.length > 0) {
+                    // Sadece şadırvan varsa onu kullan
+                    tileset = loadedTilesets[tilesetKeys[0]];
+                    console.log('Sadece şadırvan bulundu, kullanılıyor:', tilesetKeys[0]);
+                }
+            }
+        }
+        
+        // 5. Son çare: Scene'deki primitives'lerden ilk tileset'i al
+        if (!tileset) {
+            console.log('loadedTilesets boş, scene primitives\'lerden aranıyor...');
+            const primitives = viewer.scene.primitives;
+            for (let i = 0; i < primitives.length; i++) {
+                const primitive = primitives.get(i);
+                if (primitive && primitive.isCesium3DTileset) {
+                    // Şadırvan değilse kullan
+                    const primitiveAssetId = primitive._assetId || primitive.assetId;
+                    if (!primitiveAssetId || primitiveAssetId.toString() !== '4277312') {
+                        tileset = primitive;
+                        console.log('Scene\'de tileset bulundu, kullanılıyor');
+                        break;
+                    }
+                }
+            }
+        }
+        
+        if (!tileset) {
+            console.warn('Hiç tileset yüklenmemiş - Lütfen önce modelleri yükleyin');
             return;
         }
 
-        const boundingSphere = exteriorTileset.boundingSphere;
-        if (!boundingSphere) return;
+        // Bounding sphere'u bekle (tileset henüz yükleniyor olabilir)
+        const boundingSphere = tileset.boundingSphere;
+        if (!boundingSphere) {
+            console.warn('Tileset bounding sphere bulunamadı - Tileset henüz yükleniyor olabilir');
+            // Bounding sphere yoksa, tileset'in ready event'ini bekle
+            if (tileset.readyPromise) {
+                tileset.readyPromise.then(() => {
+                    console.log('Tileset hazır, orbit kilidi tekrar deneniyor...');
+                    lockOrbitToModel();
+                }).catch(err => {
+                    console.error('Tileset yüklenirken hata:', err);
+                });
+            }
+            return;
+        }
 
         const center = boundingSphere.center;
-
-        // Mevcut kamera pozisyonunu al
-        const cameraPosition = viewer.camera.position;
-
-        // Kamera ile modelin merkezi arasındaki mesafeyi hesapla
-        const currentDistance = Cesium.Cartesian3.distance(cameraPosition, center);
+        const radius = boundingSphere.radius;
 
         // Transform matrisini oluştur
         const transform = Cesium.Transforms.eastNorthUpToFixedFrame(center);
 
-        // Kamerayı bu transform'a kilitle - mevcut heading, pitch ve mesafeyi koru
+        // Kamerayı bu transform'a kilitle
         viewer.camera.lookAtTransform(
             transform,
             new Cesium.HeadingPitchRange(
                 viewer.camera.heading,
                 viewer.camera.pitch,
-                currentDistance // Mevcut mesafeyi koru
+                radius * 2.5
             )
         );
 
-        console.log('Kamera modele kilitlendi - Orbit modu aktif (mevcut pozisyondan)');
+        console.log('Kamera modele kilitlendi - Orbit modu aktif (Merkez: Dış Cephe)');
     }
 
     /**
@@ -827,6 +951,11 @@ const CesiumViewer = (function() {
      * Render kalitesini ayarla
      */
     function setQuality(quality) {
+        if (!viewer) {
+            console.warn('Viewer başlatılmamış');
+            return;
+        }
+        
         settings.quality = quality;
         
         // Kalite parametreleri
@@ -845,6 +974,15 @@ const CesiumViewer = (function() {
         // Current tileset için de uygula
         if (currentTileset) {
             currentTileset.maximumScreenSpaceError = screenSpaceError;
+        }
+        
+        // Scene'deki tüm primitives'leri kontrol et ve tileset olanları güncelle
+        const primitives = viewer.scene.primitives;
+        for (let i = 0; i < primitives.length; i++) {
+            const primitive = primitives.get(i);
+            if (primitive && primitive.isCesium3DTileset) {
+                primitive.maximumScreenSpaceError = screenSpaceError;
+            }
         }
         
         // Scene ayarları
@@ -929,11 +1067,18 @@ const CesiumViewer = (function() {
      * @param {boolean} visible - Görünürlük durumu
      */
     function setLayerVisibility(layerIdOrAssetId, visible) {
+        if (!viewer) {
+            console.warn('Viewer başlatılmamış');
+            return;
+        }
+        
+        let tilesetFound = false;
+        
         // Önce asset ID olarak dene
         if (loadedTilesets[layerIdOrAssetId]) {
             loadedTilesets[layerIdOrAssetId].show = visible;
-            console.log(`Tileset ${layerIdOrAssetId} görünürlük: ${visible}`);
-            return;
+            console.log(`Tileset ${layerIdOrAssetId} görünürlük: ${visible} (loadedTilesets)`);
+            tilesetFound = true;
         }
         
         // Legacy layer ID'ler için
@@ -941,26 +1086,60 @@ const CesiumViewer = (function() {
             case 'exterior':
             case 'molla-husrev-exterior':
             case '4270999':
-                if (loadedTilesets['4270999']) loadedTilesets['4270999'].show = visible;
-                else if (currentTileset) currentTileset.show = visible;
+                if (loadedTilesets['4270999']) {
+                    loadedTilesets['4270999'].show = visible;
+                    tilesetFound = true;
+                } else if (currentTileset) {
+                    currentTileset.show = visible;
+                    tilesetFound = true;
+                }
                 break;
             case 'interior-1':
             case '4271001':
-                if (loadedTilesets['4271001']) loadedTilesets['4271001'].show = visible;
+                if (loadedTilesets['4271001']) {
+                    loadedTilesets['4271001'].show = visible;
+                    tilesetFound = true;
+                }
                 break;
             case 'interior-2':
             case '4275532':
-                if (loadedTilesets['4275532']) loadedTilesets['4275532'].show = visible;
+                if (loadedTilesets['4275532']) {
+                    loadedTilesets['4275532'].show = visible;
+                    tilesetFound = true;
+                }
                 break;
             case 'sadirvan':
             case '4277312':
-                if (loadedTilesets['4277312']) loadedTilesets['4277312'].show = visible;
+                if (loadedTilesets['4277312']) {
+                    loadedTilesets['4277312'].show = visible;
+                    tilesetFound = true;
+                }
                 break;
             case 'lod0-context':
-                if (contextTileset) contextTileset.show = visible;
+                if (contextTileset) {
+                    contextTileset.show = visible;
+                    tilesetFound = true;
+                }
                 break;
-            default:
-                console.warn('Bilinmeyen katman:', layerIdOrAssetId);
+        }
+        
+        // Scene'deki primitives'lerden de kontrol et
+        const primitives = viewer.scene.primitives;
+        for (let i = 0; i < primitives.length; i++) {
+            const primitive = primitives.get(i);
+            if (primitive && primitive.isCesium3DTileset) {
+                // Asset ID'yi kontrol et (eğer varsa)
+                const primitiveAssetId = primitive._assetId || primitive.assetId;
+                if (primitiveAssetId && primitiveAssetId.toString() === layerIdOrAssetId) {
+                    primitive.show = visible;
+                    console.log(`Primitive tileset görünürlük ayarlandı: ${layerIdOrAssetId} = ${visible}`);
+                    tilesetFound = true;
+                }
+            }
+        }
+        
+        if (!tilesetFound) {
+            console.warn('Katman bulunamadı:', layerIdOrAssetId);
         }
     }
     
@@ -987,7 +1166,7 @@ const CesiumViewer = (function() {
         const tileset = loadedTilesets[assetId.toString()];
         if (tileset) {
             applyHeightOffset(tileset, heightOffset);
-            MODEL_HEIGHT_OFFSETS[assetId.toString()] = heightOffset;
+            // MODEL_HEIGHT_OFFSETS const olduğu için güncellenemez, sadece kullanılır
             console.log(`Model ${assetId} height offset: ${heightOffset}m`);
         } else {
             console.warn('Tileset bulunamadı:', assetId);

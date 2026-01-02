@@ -261,19 +261,19 @@ const App = (function() {
             // Molla Hüsrev Camii 3D modellerini yükle
             updateLoadingStatus('3D modeller yükleniyor...');
 
-            // Dış cephe (Asset ID: 4270999)
-            const exteriorTileset = await CesiumViewer.loadFromIonAssetId(4270999, { zoomTo: false });
+            // Dış cephe (Asset ID: 4270999) - Açık başlar
+            const exteriorTileset = await CesiumViewer.loadFromIonAssetId(4270999, { zoomTo: false, show: true });
             state.loadedTilesets['4270999'] = exteriorTileset;
 
-            // İç mekan modelleri (Asset ID: 4271001 ve 4275532)
-            const interior1Tileset = await CesiumViewer.loadFromIonAssetId(4271001, { zoomTo: false });
+            // İç mekan modelleri (Asset ID: 4271001 ve 4275532) - Kapalı başlar
+            const interior1Tileset = await CesiumViewer.loadFromIonAssetId(4271001, { zoomTo: false, show: false });
             state.loadedTilesets['4271001'] = interior1Tileset;
 
-            const interior2Tileset = await CesiumViewer.loadFromIonAssetId(4275532, { zoomTo: false });
+            const interior2Tileset = await CesiumViewer.loadFromIonAssetId(4275532, { zoomTo: false, show: false });
             state.loadedTilesets['4275532'] = interior2Tileset;
 
-            // Şadırvan (Asset ID: 4277312)
-            const sadirvanTileset = await CesiumViewer.loadFromIonAssetId(4277312, { zoomTo: false });
+            // Şadırvan (Asset ID: 4277312) - Kapalı başlar
+            const sadirvanTileset = await CesiumViewer.loadFromIonAssetId(4277312, { zoomTo: false, show: false });
             state.loadedTilesets['4277312'] = sadirvanTileset;
             
             // Model etrafında orbit modunu aktifleştir
