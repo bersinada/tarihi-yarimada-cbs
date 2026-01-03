@@ -275,6 +275,10 @@ const App = (function() {
             // Şadırvan (Asset ID: 4277312) - Kapalı başlar
             const sadirvanTileset = await CesiumViewer.loadFromIonAssetId(4277312, { zoomTo: false, show: false });
             state.loadedTilesets['4277312'] = sadirvanTileset;
+
+            // Sultanahmet Camii (Asset ID: 4318496) - Açık başlar
+            const sultanahmetTileset = await CesiumViewer.loadFromIonAssetId(4318496, { zoomTo: false, show: true });
+            state.loadedTilesets['4318496'] = sultanahmetTileset;
             
             // Model etrafında orbit modunu aktifleştir
             updateLoadingStatus('Orbit modu ayarlanıyor...');

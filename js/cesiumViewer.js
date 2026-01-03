@@ -53,7 +53,8 @@ const CesiumViewer = (function() {
         '4270999': 0,  // Dış cephe
         '4271001': 0,  // İç mekan 1
         '4275532': 0,  // İç mekan 2
-        '4277312': 0   // Şadırvan
+        '4277312': 0,  // Şadırvan
+        '4318496': 0   // Sultanahmet Camii
     };
 
     // Altlık harita sağlayıcıları
@@ -708,119 +709,41 @@ const CesiumViewer = (function() {
     }
 
     /**
-     * Model etrafında orbit - merkeze kilitle
-     * Bu mod aktifken kamera sadece model etrafında döner
-     * Öncelik: Dış cephe (4270999) > Diğer katmanlar
+     * Model etrafında orbit - mevcut pozisyonda kilitle
+     * Bu mod aktifken kamera mevcut pozisyon etrafında döner
+     * Artık belirli bir modele gitmez, o anki kamera pozisyonunu merkez alır
      */
     function lockOrbitToModel() {
-        // Öncelik: Dış cephe katmanını (4270999) bul
-        // Bu ana camii modeli, orbit modunda merkeze alınmalı
-        const PRIMARY_ASSET_ID = '4270999'; // Dış cephe - Ana camii
+        // Mevcut kamera pozisyonunu al
+        const cameraPosition = viewer.camera.position;
         
-        let tileset = null;
+        // Kameranın baktığı yönü al (pick ray ile)
+        const direction = viewer.camera.direction;
         
-        // 1. Önce dış cephe katmanını (4270999) yüklü tilesetlerden ara
-        if (loadedTilesets[PRIMARY_ASSET_ID]) {
-            tileset = loadedTilesets[PRIMARY_ASSET_ID];
-            console.log('Dış cephe katmanı (4270999) bulundu, orbit merkezi olarak kullanılıyor');
-        }
+        // Kameranın baktığı noktayı hesapla (yaklaşık 100m ileride)
+        const lookAtPoint = Cesium.Cartesian3.add(
+            cameraPosition,
+            Cesium.Cartesian3.multiplyByScalar(direction, 100, new Cesium.Cartesian3()),
+            new Cesium.Cartesian3()
+        );
         
-        // 2. Scene'deki primitives'lerden dış cephe katmanını ara
-        if (!tileset) {
-            const primitives = viewer.scene.primitives;
-            for (let i = 0; i < primitives.length; i++) {
-                const primitive = primitives.get(i);
-                if (primitive && primitive.isCesium3DTileset) {
-                    // Asset ID'yi kontrol et
-                    const primitiveAssetId = primitive._assetId || primitive.assetId;
-                    if (primitiveAssetId && primitiveAssetId.toString() === PRIMARY_ASSET_ID) {
-                        tileset = primitive;
-                        console.log('Scene\'de dış cephe katmanı (4270999) bulundu');
-                        break;
-                    }
-                }
-            }
-        }
+        // Transform matrisini oluştur (mevcut bakış noktası etrafında)
+        const transform = Cesium.Transforms.eastNorthUpToFixedFrame(lookAtPoint);
         
-        // 3. Dış cephe bulunamazsa, currentTileset'i dene
-        if (!tileset && currentTileset) {
-            tileset = currentTileset;
-            console.log('currentTileset kullanılıyor');
-        }
+        // Mevcut kamera mesafesini hesapla
+        const currentDistance = Cesium.Cartesian3.distance(cameraPosition, lookAtPoint);
         
-        // 4. Hala yoksa, loadedTilesets'ten ilkini al (dış cephe olmayabilir)
-        if (!tileset) {
-            const tilesetKeys = Object.keys(loadedTilesets);
-            if (tilesetKeys.length > 0) {
-                // Şadırvan (4277312) hariç tut - öncelik dış cephe ve iç mekanlarda
-                const nonSadirvanKeys = tilesetKeys.filter(key => key !== '4277312');
-                if (nonSadirvanKeys.length > 0) {
-                    tileset = loadedTilesets[nonSadirvanKeys[0]];
-                    console.log('loadedTilesets\'ten tileset kullanılıyor (şadırvan hariç):', nonSadirvanKeys[0]);
-                } else if (tilesetKeys.length > 0) {
-                    // Sadece şadırvan varsa onu kullan
-                    tileset = loadedTilesets[tilesetKeys[0]];
-                    console.log('Sadece şadırvan bulundu, kullanılıyor:', tilesetKeys[0]);
-                }
-            }
-        }
-        
-        // 5. Son çare: Scene'deki primitives'lerden ilk tileset'i al
-        if (!tileset) {
-            console.log('loadedTilesets boş, scene primitives\'lerden aranıyor...');
-            const primitives = viewer.scene.primitives;
-            for (let i = 0; i < primitives.length; i++) {
-                const primitive = primitives.get(i);
-                if (primitive && primitive.isCesium3DTileset) {
-                    // Şadırvan değilse kullan
-                    const primitiveAssetId = primitive._assetId || primitive.assetId;
-                    if (!primitiveAssetId || primitiveAssetId.toString() !== '4277312') {
-                        tileset = primitive;
-                        console.log('Scene\'de tileset bulundu, kullanılıyor');
-                        break;
-                    }
-                }
-            }
-        }
-        
-        if (!tileset) {
-            console.warn('Hiç tileset yüklenmemiş - Lütfen önce modelleri yükleyin');
-            return;
-        }
-
-        // Bounding sphere'u bekle (tileset henüz yükleniyor olabilir)
-        const boundingSphere = tileset.boundingSphere;
-        if (!boundingSphere) {
-            console.warn('Tileset bounding sphere bulunamadı - Tileset henüz yükleniyor olabilir');
-            // Bounding sphere yoksa, tileset'in ready event'ini bekle
-            if (tileset.readyPromise) {
-                tileset.readyPromise.then(() => {
-                    console.log('Tileset hazır, orbit kilidi tekrar deneniyor...');
-                    lockOrbitToModel();
-                }).catch(err => {
-                    console.error('Tileset yüklenirken hata:', err);
-                });
-            }
-            return;
-        }
-
-        const center = boundingSphere.center;
-        const radius = boundingSphere.radius;
-
-        // Transform matrisini oluştur
-        const transform = Cesium.Transforms.eastNorthUpToFixedFrame(center);
-
-        // Kamerayı bu transform'a kilitle
+        // Kamerayı bu transform'a kilitle (mevcut pozisyonu koruyarak)
         viewer.camera.lookAtTransform(
             transform,
             new Cesium.HeadingPitchRange(
                 viewer.camera.heading,
                 viewer.camera.pitch,
-                radius * 2.5
+                currentDistance
             )
         );
 
-        console.log('Kamera modele kilitlendi - Orbit modu aktif (Merkez: Dış Cephe)');
+        console.log('Kamera mevcut pozisyonda orbit moduna kilitlendi');
     }
 
     /**
@@ -1112,6 +1035,13 @@ const CesiumViewer = (function() {
             case '4277312':
                 if (loadedTilesets['4277312']) {
                     loadedTilesets['4277312'].show = visible;
+                    tilesetFound = true;
+                }
+                break;
+            case 'sultanahmet':
+            case '4318496':
+                if (loadedTilesets['4318496']) {
+                    loadedTilesets['4318496'].show = visible;
                     tilesetFound = true;
                 }
                 break;
