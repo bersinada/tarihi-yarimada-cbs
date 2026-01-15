@@ -1,0 +1,33 @@
+# Tarihi Yarimada CBS - Backend Dependencies
+# Clean Architecture implementation with PostGIS
+
+# Web Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+gunicorn==21.2.0
+
+# Database
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.25
+geoalchemy2==0.14.3
+
+# Geospatial
+shapely==2.0.2
+pyproj==3.6.1
+
+# Data Validation
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# CORS & Multipart
+python-multipart==0.0.6
+
+# Environment Variables
+python-dotenv==1.0.0
+
+# ASGI Server
+aiofiles==23.2.1
+
+# Development & Testing
+pytest==7.4.4
+httpx==0.26.0
