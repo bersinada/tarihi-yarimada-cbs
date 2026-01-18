@@ -17,7 +17,31 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from dotenv import load_dotenv
-load_dotenv()
+
+# .env dosyasını yükle
+env_path = Path(__file__).parent.parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
+else:
+    # Backend klasöründeki .env'i dene
+    env_path = Path(__file__).parent.parent / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+    else:
+        load_dotenv()  # Mevcut dizinde .env ara
+
+# Database URL'i al - önce local_database_url (küçük harf), sonra LOCAL_DATABASE_URL, sonra DATABASE_URL
+database_url = (
+    os.getenv("local_database_url") or 
+    os.getenv("LOCAL_DATABASE_URL") or 
+    os.getenv("DATABASE_URL") or
+    os.getenv("AZURE_DATABASE_URL")
+)
+
+# Eğer local_database_url bulunduysa, DATABASE_URL'i de set et
+# (database.py modülü DATABASE_URL bekliyor)
+if database_url and not os.getenv("DATABASE_URL"):
+    os.environ["DATABASE_URL"] = database_url
 
 from sqlalchemy import text
 from app.db.database import SessionLocal, engine, Base, init_db
@@ -130,8 +154,9 @@ def seed_database():
             description_tr="Mimar Sinan'in 'kalfalik eserim' dedigi cami. Osmanli mimarisinin en onemli yapilarindan biri.",
             description_en="The mosque that Sinan called his 'journeyman work'. One of the most important structures of Ottoman architecture.",
             protection_status="1. derece",
-            model_type="SPLAT",
+            model_type="3DTILES",
             model_lod="LOD3",
+            cesium_ion_asset_id=4357341,
             is_visitable=True,
             data_source="Kultur ve Turizm Bakanligi"
         )
@@ -153,35 +178,15 @@ def seed_database():
             protection_status="UNESCO",
             model_type="3DTILES",
             model_lod="LOD3",
+            cesium_ion_asset_id=4357357,
             is_visitable=True,
             data_source="UNESCO Dunya Mirasi"
         )
         db.add(ayasofya)
 
-        # Kucuk Ayasofya
-        kucuk_ayasofya = HeritageAsset(
-            identifier="HA-0003",
-            name_tr="Kucuk Ayasofya Camii",
-            name_en="Little Hagia Sophia (Church of Saints Sergius and Bacchus)",
-            asset_type="cami",
-            construction_year=536,
-            construction_period="527-536",
-            historical_period="bizans",
-            location="SRID=4326;POINT(28.9719 41.0042)",
-            neighborhood="Sultanahmet",
-            description_tr="Bizans Imparatoru I. Justinianus tarafindan yaptirilan kilise. Ayasofya'nin kucuk prototipi olarak kabul edilir.",
-            description_en="Church built by Byzantine Emperor Justinian I. Considered a small prototype of Hagia Sophia.",
-            protection_status="1. derece",
-            model_type="SPLAT",
-            model_lod="LOD2",
-            is_visitable=True,
-            data_source="Kultur ve Turizm Bakanligi"
-        )
-        db.add(kucuk_ayasofya)
-
         # Sultanahmet Camii
         sultanahmet = HeritageAsset(
-            identifier="HA-0004",
+            identifier="HA-0003",
             name_tr="Sultanahmet Camii",
             name_en="Sultan Ahmed Mosque (Blue Mosque)",
             asset_type="cami",
@@ -193,33 +198,57 @@ def seed_database():
             description_tr="6 minaresiyle unlu, 'Mavi Cami' olarak da bilinen Osmanli donemi camisi.",
             description_en="Famous for its 6 minarets, also known as the 'Blue Mosque', an Ottoman-era mosque.",
             protection_status="1. derece",
-            model_type="SPLAT",
+            model_type="3DTILES",
             model_lod="LOD3",
+            cesium_ion_asset_id=4357335,
             is_visitable=True,
             data_source="Kultur ve Turizm Bakanligi"
         )
         db.add(sultanahmet)
 
-        # Topkapi Sarayi
-        topkapi = HeritageAsset(
-            identifier="HA-0005",
-            name_tr="Topkapi Sarayi",
-            name_en="Topkapi Palace",
-            asset_type="saray",
-            construction_year=1478,
-            construction_period="1460-1478",
-            historical_period="osmanli_klasik",
-            location="SRID=4326;POINT(28.9833 41.0115)",
-            neighborhood="Sultanahmet",
-            description_tr="Osmanli padisahlarinin yaklasik 400 yil boyunca yasadigi ve devleti yonettigi saray kompleksi.",
-            description_en="The palace complex where Ottoman sultans lived and ruled the empire for approximately 400 years.",
+        # Kariye Camii
+        kariye = HeritageAsset(
+            identifier="HA-0004",
+            name_tr="Kariye Camii",
+            name_en="Chora Church (Kariye Mosque)",
+            asset_type="cami",
+            construction_year=534,
+            construction_period="534-1511",
+            historical_period="bizans",
+            location="SRID=4326;POINT(28.9390 41.0312)",
+            neighborhood="Edirnekapi",
+            description_tr="Bizans donemi kilisesi. Dunyaca unlu mozaik ve fresklerine sahip onemli bir kulturel miras yapisi.",
+            description_en="Byzantine-era church. An important cultural heritage structure with world-famous mosaics and frescoes.",
             protection_status="UNESCO",
             model_type="3DTILES",
-            model_lod="LOD2",
+            model_lod="LOD3",
+            cesium_ion_asset_id=4357343,
             is_visitable=True,
             data_source="UNESCO Dunya Mirasi"
         )
-        db.add(topkapi)
+        db.add(kariye)
+
+        # Molla Husrev Camii
+        molla_husrev = HeritageAsset(
+            identifier="HA-0005",
+            name_tr="Molla Husrev Camii",
+            name_en="Molla Husrev Mosque",
+            asset_type="cami",
+            construction_year=1455,
+            construction_period="1455",
+            historical_period="osmanli_klasik",
+            location="SRID=4326;POINT(28.9593 41.0146)",
+            neighborhood="Fatih",
+            description_tr="Osmanli Devleti'nin ilk seyhulislamlarindan Molla Husrev tarafindan yaptirilan cami.",
+            description_en="Mosque built by Molla Husrev, one of the first Shaykh al-Islams of the Ottoman Empire.",
+            protection_status="1. derece",
+            model_type="3DTILES",
+            model_lod="LOD3",
+            cesium_ion_asset_id=4357344,
+            is_visitable=True,
+            data_source="Kultur ve Turizm Bakanligi"
+        )
+        db.add(molla_husrev)
 
         db.flush()  # Get IDs for assets
 
@@ -234,50 +263,15 @@ def seed_database():
         db.add(AssetActor(asset_id=suleymaniye.id, actor_id=kanuni.id, role="patron"))
         # Ayasofya - Justinian (patron)
         db.add(AssetActor(asset_id=ayasofya.id, actor_id=justinian.id, role="patron"))
-        # Kucuk Ayasofya - Justinian (patron)
-        db.add(AssetActor(asset_id=kucuk_ayasofya.id, actor_id=justinian.id, role="patron"))
+        # Kariye - Justinian (patron)
+        db.add(AssetActor(asset_id=kariye.id, actor_id=justinian.id, role="patron"))
 
         # ==================================================
-        # 5. Asset Segments (SAM3D)
+        # 5. Asset Segments (SAM3D) - Basit ornekler
         # ==================================================
         print("  Adding asset segments...")
 
-        # Suleymaniye segments
-        db.add(AssetSegment(
-            asset_id=suleymaniye.id,
-            segment_name="Ana Kubbe",
-            segment_type="dome",
-            object_id="dome_main_001",
-            material="Tas, kursun kaplama",
-            height_m=53.0,
-            width_m=26.5,
-            condition="restored",
-            restoration_year=2011,
-            description_tr="Sinan'in en buyuk kubbelerinden biri. Capi 26.5 metre."
-        ))
-
-        db.add(AssetSegment(
-            asset_id=suleymaniye.id,
-            segment_name="Kuzeybati Minare",
-            segment_type="minaret",
-            object_id="minaret_nw_001",
-            material="Kesme tas",
-            height_m=76.0,
-            condition="original",
-            description_tr="Dort minareden biri. Uc serefeli."
-        ))
-
-        db.add(AssetSegment(
-            asset_id=suleymaniye.id,
-            segment_name="Avlu",
-            segment_type="courtyard",
-            object_id="courtyard_001",
-            material="Mermer doseme",
-            condition="restored",
-            description_tr="Revakli avlu, ortasinda sadirvan bulunur."
-        ))
-
-        # Ayasofya segments
+        # Ayasofya ana kubbe
         db.add(AssetSegment(
             asset_id=ayasofya.id,
             segment_name="Ana Kubbe",
@@ -290,30 +284,7 @@ def seed_database():
             description_tr="Yapildigi donemde dunyanin en buyuk kubbesi."
         ))
 
-        # Kucuk Ayasofya segments
-        db.add(AssetSegment(
-            asset_id=kucuk_ayasofya.id,
-            segment_name="Ana Kubbe",
-            segment_type="dome",
-            object_id="dome_main_001",
-            material="Tugla",
-            height_m=20.0,
-            width_m=16.0,
-            condition="restored",
-            description_tr="Sekizgen kasnak uzerine oturan kubbe. Ayasofya'nin prototiplerinden."
-        ))
-
-        db.add(AssetSegment(
-            asset_id=kucuk_ayasofya.id,
-            segment_name="Revakli Avlu",
-            segment_type="courtyard",
-            object_id="courtyard_001",
-            material="Mermer sutunlar",
-            condition="restored",
-            description_tr="Osmanli doneminde eklenen revakli avlu."
-        ))
-
-        # Sultanahmet segments
+        # Sultanahmet ana kubbe
         db.add(AssetSegment(
             asset_id=sultanahmet.id,
             segment_name="Ana Kubbe",
@@ -325,17 +296,6 @@ def seed_database():
             condition="restored",
             restoration_year=2017,
             description_tr="Alti yarım kubbe ile desteklenen ana kubbe."
-        ))
-
-        db.add(AssetSegment(
-            asset_id=sultanahmet.id,
-            segment_name="Bati Minare 1",
-            segment_type="minaret",
-            object_id="minaret_w1_001",
-            material="Kesme tas",
-            height_m=64.0,
-            condition="original",
-            description_tr="Alti minareden biri. Uc serefeli."
         ))
 
         db.commit()

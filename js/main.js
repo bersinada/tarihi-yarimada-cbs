@@ -1,23 +1,23 @@
 /**
  * Tarihi Yarımada CBS - Main Application
- * Ana uygulama kontrolcüsü
+ * Yeniden Tasarlanmış Ana Uygulama Kontrolcüsü
  */
 
 const App = (function() {
     // Uygulama durumu
     const state = {
-        currentView: 'cesium', // 'cesium' (tek görünüm)
-        isPanelOpen: false,
+        currentAssetId: null, // Seçili eser
+        isAssetPanelOpen: false,
+        isAboutPanelOpen: false,
         isBasemapPanelOpen: false,
-        currentBasemap: 'satellite', // Varsayılan: uydu görüntüsü
+        currentBasemap: 'satellite',
         isLoading: true,
         cesiumReady: false,
-        orbitLocked: false, // Orbit kilidi durumu
-        currentYapiId: 1, // Varsayılan yapı ID (Molla Hüsrev Camii)
-        notes: [], // Kayıtlı notlar
-        interiorMode: false, // İç mekan modu aktif mi?
-        loadedTilesets: {}, // Yüklenen tilesetler: { assetId: tileset }
-        renderQuality: 'low' // Varsayılan render kalitesi (performans için düşük)
+        orbitLocked: false,
+        notes: [],
+        interiorMode: false,
+        loadedTilesets: {}, // { ionAssetId: tileset }
+        renderQuality: 'low'
     };
 
     // DOM elementleri
@@ -29,23 +29,11 @@ const App = (function() {
     async function initialize() {
         console.log('Tarihi Yarımada CBS başlatılıyor...');
         
-        // DOM elementlerini cache'le
         cacheElements();
-        
-        // Event listener'ları kur
         setupEventListeners();
-        
-        // API bağlantısını kontrol et
         checkAPIConnection();
-        
-        // Viewer'ları başlat
         await initializeViewers();
-        
-        // Loading ekranını kapat
         hideLoadingScreen();
-        
-        // Notları yükle
-        loadNotes();
         
         console.log('Uygulama başarıyla başlatıldı');
     }
@@ -54,31 +42,33 @@ const App = (function() {
      * DOM elementlerini cache'le
      */
     function cacheElements() {
+        // Loading Screen
         elements.loadingScreen = document.getElementById('loading-screen');
         elements.app = document.getElementById('app');
         elements.loaderStatus = document.querySelector('.loader-status');
         
-        // Containers
+        // Main containers
         elements.cesiumContainer = document.getElementById('cesium-container');
         elements.mainContent = document.querySelector('.main-content');
         
-        // Navigation
-        elements.navButtons = document.querySelectorAll('.nav-btn');
-        
-        // Side Panel
-        elements.sidePanel = document.getElementById('side-panel');
-        elements.panelClose = document.getElementById('panel-close');
+        // Panels
+        elements.assetPanel = document.getElementById('asset-panel');
+        elements.assetPanelClose = document.getElementById('asset-panel-close');
+        elements.aboutPanel = document.getElementById('about-panel');
+        elements.aboutClose = document.getElementById('about-close');
         
         // Header buttons
+        elements.btnAbout = document.getElementById('btn-about');
         elements.btnBasemap = document.getElementById('btn-basemap');
         elements.btnLayers = document.getElementById('btn-layers');
-        elements.btnInfo = document.getElementById('btn-info');
         elements.btnSettings = document.getElementById('btn-settings');
         
-        // Basemap Panel
-        elements.basemapPanel = document.getElementById('basemap-panel');
-        elements.basemapClose = document.getElementById('basemap-close');
-        elements.basemapItems = document.querySelectorAll('.basemap-item');
+        // Dropdown menu
+        elements.dropdownItems = document.querySelectorAll('.dropdown-item');
+
+        // Modals
+        elements.basemapModal = document.getElementById('basemap-modal');
+        elements.layersModal = document.getElementById('layers-modal');
         
         // Floating controls
         elements.btnHome = document.getElementById('btn-home');
@@ -87,20 +77,26 @@ const App = (function() {
         elements.btnZoomOut = document.getElementById('btn-zoom-out');
         elements.btnFullscreen = document.getElementById('btn-fullscreen');
         
-        // Modals
-        elements.infoModal = document.getElementById('info-modal');
+        // Settings modal
         elements.settingsModal = document.getElementById('settings-modal');
-        
-        // Layer checkboxes
-        elements.layerCheckboxes = document.querySelectorAll('.layer-item input');
-        
-        // Settings controls
         elements.renderQuality = document.getElementById('render-quality');
         elements.pointSize = document.getElementById('point-size');
         elements.showShadows = document.getElementById('show-shadows');
         elements.terrainEnabled = document.getElementById('terrain-enabled');
         
-        // Notes elements
+        // Asset panel elements
+        elements.assetPanelTitle = document.getElementById('asset-panel-title');
+        elements.assetName = document.getElementById('asset-name');
+        elements.assetPeriod = document.getElementById('asset-period');
+        elements.assetYear = document.getElementById('asset-year');
+        elements.assetPeriodInfo = document.getElementById('asset-period-info');
+        elements.assetFounder = document.getElementById('asset-founder');
+        elements.assetLocation = document.getElementById('asset-location');
+        elements.assetDescription = document.getElementById('asset-description');
+        elements.assetLayers = document.getElementById('asset-layers');
+        elements.locationText = document.getElementById('location-text');
+        
+        // Notes
         elements.noteTitle = document.getElementById('note-title');
         elements.noteContent = document.getElementById('note-content');
         elements.noteAuthor = document.getElementById('note-author');
@@ -109,41 +105,82 @@ const App = (function() {
         elements.btnRefreshNotes = document.getElementById('btn-refresh-notes');
         elements.notesCountNumber = document.getElementById('notes-count-number');
         elements.notesItems = document.getElementById('notes-items');
-        
-        // Interior Navigation elements
-        elements.btnEnterInterior = document.getElementById('btn-enter-interior');
     }
 
     /**
      * Event listener'ları kur
      */
     function setupEventListeners() {
-        // Navigation buttons
-        elements.navButtons.forEach(btn => {
-            btn.addEventListener('click', () => handleNavigation(btn.dataset.view));
+        // Dropdown items - Eser seçimi
+        elements.dropdownItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const assetId = item.dataset.asset;
+                selectAsset(assetId);
+            });
         });
         
-        // Header buttons
-        elements.btnBasemap.addEventListener('click', toggleBasemapPanel);
-        elements.btnLayers.addEventListener('click', toggleSidePanel);
-        elements.btnInfo.addEventListener('click', () => openModal('info-modal'));
-        elements.btnSettings.addEventListener('click', () => openModal('settings-modal'));
+        // About button
+        if (elements.btnAbout) {
+            elements.btnAbout.addEventListener('click', toggleAboutPanel);
+        }
         
-        // Basemap panel
-        elements.basemapClose.addEventListener('click', closeBasemapPanel);
-        elements.basemapItems.forEach(item => {
-            item.addEventListener('click', () => handleBasemapChange(item.dataset.basemap));
+        // Asset panel close
+        if (elements.assetPanelClose) {
+            elements.assetPanelClose.addEventListener('click', closeAssetPanel);
+        }
+        
+        // About panel close
+        if (elements.aboutClose) {
+            elements.aboutClose.addEventListener('click', closeAboutPanel);
+        }
+        
+        // Basemap button
+        if (elements.btnBasemap) {
+            elements.btnBasemap.addEventListener('click', () => openModal('basemap-modal'));
+        }
+
+        // Layers button
+        if (elements.btnLayers) {
+            elements.btnLayers.addEventListener('click', () => openModal('layers-modal'));
+        }
+
+        // Settings button
+        if (elements.btnSettings) {
+            elements.btnSettings.addEventListener('click', () => openModal('settings-modal'));
+        }
+
+        // Basemap options
+        document.querySelectorAll('.basemap-option').forEach(option => {
+            option.addEventListener('click', () => {
+                const basemapId = option.dataset.basemap;
+                handleBasemapChange(basemapId);
+            });
         });
-        
-        // Panel close
-        elements.panelClose.addEventListener('click', closeSidePanel);
+
+        // Layer checkboxes in modal
+        document.querySelectorAll('#layers-modal input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const layerType = e.target.dataset.layer;
+                handleLayerToggle(layerType, e.target.checked);
+            });
+        });
         
         // Floating controls
-        elements.btnHome.addEventListener('click', handleHomeClick);
-        elements.btnOrbit.addEventListener('click', handleOrbitToggle);
-        elements.btnZoomIn.addEventListener('click', handleZoomIn);
-        elements.btnZoomOut.addEventListener('click', handleZoomOut);
-        elements.btnFullscreen.addEventListener('click', handleFullscreen);
+        if (elements.btnHome) {
+            elements.btnHome.addEventListener('click', handleHomeClick);
+        }
+        if (elements.btnOrbit) {
+            elements.btnOrbit.addEventListener('click', handleOrbitToggle);
+        }
+        if (elements.btnZoomIn) {
+            elements.btnZoomIn.addEventListener('click', handleZoomIn);
+        }
+        if (elements.btnZoomOut) {
+            elements.btnZoomOut.addEventListener('click', handleZoomOut);
+        }
+        if (elements.btnFullscreen) {
+            elements.btnFullscreen.addEventListener('click', handleFullscreen);
+        }
         
         // Modal close buttons
         document.querySelectorAll('.modal-close').forEach(btn => {
@@ -157,18 +194,11 @@ const App = (function() {
             });
         });
         
-        // Layer checkboxes
-        elements.layerCheckboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', (e) => {
-                handleLayerToggle(e.target.dataset.layer, e.target.checked);
-            });
-        });
-        
-        
-        // Settings
+        // Settings controls
         if (elements.renderQuality) {
             elements.renderQuality.addEventListener('change', (e) => {
-                handleQualityChange(e.target.value);
+                state.renderQuality = e.target.value;
+                CesiumViewer.setQuality(state.renderQuality);
             });
         }
         
@@ -190,39 +220,7 @@ const App = (function() {
             });
         }
         
-        // Keyboard shortcuts
-        document.addEventListener('keydown', handleKeyboard);
-        
-        // Escape key to close modals/panel
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeAllModals();
-                closeSidePanel();
-                closeBasemapPanel();
-            }
-        });
-        
-        // Click outside to close basemap panel (ama side panel'i etkilemesin)
-        document.addEventListener('click', (e) => {
-            // Basemap panel kontrolü
-            if (state.isBasemapPanelOpen && 
-                !elements.basemapPanel.contains(e.target) && 
-                !elements.btnBasemap.contains(e.target)) {
-                closeBasemapPanel();
-            }
-        });
-        
-        // Input alanlarına focus olduğunda panel kapanmasını engelle
-        document.querySelectorAll('.note-input, .note-textarea').forEach(input => {
-            input.addEventListener('focus', (e) => {
-                e.stopPropagation();
-            });
-            input.addEventListener('click', (e) => {
-                e.stopPropagation();
-            });
-        });
-        
-        // Notes event listeners
+        // Notes
         if (elements.noteContent) {
             elements.noteContent.addEventListener('input', updateCharCount);
         }
@@ -235,10 +233,15 @@ const App = (function() {
             elements.btnRefreshNotes.addEventListener('click', loadNotes);
         }
         
-        // Interior Navigation - İç Mekana Giriş Butonu
-        if (elements.btnEnterInterior) {
-            elements.btnEnterInterior.addEventListener('click', handleEnterInterior);
-        }
+        // Close panel when pressing Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeAssetPanel();
+                closeAboutPanel();
+                closeBasemapPanel();
+                closeAllModals();
+            }
+        });
     }
 
     /**
@@ -246,50 +249,334 @@ const App = (function() {
      */
     async function initializeViewers() {
         updateLoadingStatus('Cesium Viewer hazırlanıyor...');
-        
+
         try {
-            // Cesium Viewer'ı başlat
+            // Backend'den eserleri yükle
+            updateLoadingStatus('Eserler yükleniyor...');
+            await AssetsData.loadAssets();
+
             await CesiumViewer.initialize('cesiumViewer');
             state.cesiumReady = true;
-            
-            // FPS sayacını başlat
             CesiumViewer.startFPSCounter();
-            
-            // Render kalitesini yüksek olarak ayarla
             CesiumViewer.setQuality(state.renderQuality);
-            
-            // Molla Hüsrev Camii 3D modellerini yükle
-            updateLoadingStatus('3D modeller yükleniyor...');
 
-            // Dış cephe (Asset ID: 4270999) - Açık başlar
-            const exteriorTileset = await CesiumViewer.loadFromIonAssetId(4270999, { zoomTo: false, show: true });
-            state.loadedTilesets['4270999'] = exteriorTileset;
+            // Tüm eserlerin modellerini yükle (başlangıçta hepsi görünsün)
+            await loadAllModels();
 
-            // İç mekan modelleri (Asset ID: 4271001 ve 4275532) - Kapalı başlar
-            const interior1Tileset = await CesiumViewer.loadFromIonAssetId(4271001, { zoomTo: false, show: false });
-            state.loadedTilesets['4271001'] = interior1Tileset;
+            // Dropdown menüsünü dinamik olarak oluştur
+            populateAssetsDropdown();
 
-            const interior2Tileset = await CesiumViewer.loadFromIonAssetId(4275532, { zoomTo: false, show: false });
-            state.loadedTilesets['4275532'] = interior2Tileset;
+            // Başlangıçta bütün yarımadayı göster ve location text'i ayarla
+            if (elements.locationText) {
+                elements.locationText.textContent = 'Tarihi Yarımada - İstanbul';
+            }
 
-            // Şadırvan (Asset ID: 4277312) - Kapalı başlar
-            const sadirvanTileset = await CesiumViewer.loadFromIonAssetId(4277312, { zoomTo: false, show: false });
-            state.loadedTilesets['4277312'] = sadirvanTileset;
+            console.log('Harita görüntüleniyor - Tarihi Yarımada');
 
-            // Sultanahmet Camii (Asset ID: 4318496) - Açık başlar
-            const sultanahmetTileset = await CesiumViewer.loadFromIonAssetId(4318496, { zoomTo: false, show: true });
-            state.loadedTilesets['4318496'] = sultanahmetTileset;
-            
-            // Model etrafında orbit modunu aktifleştir
-            updateLoadingStatus('Orbit modu ayarlanıyor...');
-            CesiumViewer.enableOrbitAroundModel();
-            
         } catch (error) {
             console.error('Cesium başlatılamadı:', error);
             updateLoadingStatus('Cesium yüklenirken hata oluştu');
         }
+    }
+
+    /**
+     * Tüm eserlerin 3D modellerini yükle
+     */
+    async function loadAllModels() {
+        updateLoadingStatus('3D modeller yükleniyor...');
         
-        updateLoadingStatus('Hazır!');
+        for (const asset of AssetsData.assets) {
+            for (const layer of asset.ionAssetIds) {
+                try {
+                    const tileset = await CesiumViewer.loadFromIonAssetId(layer.id, { 
+                        zoomTo: false, 
+                        show: true  // Başlangıçta tüm modeller görünsün
+                    });
+                    state.loadedTilesets[layer.id] = tileset;
+                    console.log(`Model yüklendi: ${layer.name}`);
+                } catch (error) {
+                    console.warn(`Model yüklenemedi: ${layer.name}`, error);
+                }
+            }
+        }
+        
+        updateLoadingStatus('Tüm modeller yüklendi');
+    }
+
+    /**
+     * Dropdown menüsünü backend'den yüklenen eserlerle doldur
+     */
+    function populateAssetsDropdown() {
+        const dropdownContent = document.querySelector('.dropdown-content');
+        if (!dropdownContent) {
+            console.warn('Dropdown content bulunamadı');
+            return;
+        }
+
+        // Mevcut içeriği temizle
+        dropdownContent.innerHTML = '';
+
+        // Eserleri periyoda göre grupla
+        const periods = {};
+        AssetsData.assets.forEach(asset => {
+            if (!periods[asset.period]) {
+                periods[asset.period] = [];
+            }
+            periods[asset.period].push(asset);
+        });
+
+        // Her periyod için section oluştur
+        const periodOrder = ['Bizans', 'Osmanlı', 'Cumhuriyet', 'Diğer'];
+        periodOrder.forEach(periodName => {
+            if (!periods[periodName] || periods[periodName].length === 0) return;
+
+            const section = document.createElement('div');
+            section.className = 'dropdown-section';
+
+            const title = document.createElement('h4');
+            title.className = 'dropdown-section-title';
+            title.innerHTML = `
+                <svg class="period-icon" viewBox="0 0 16 16" width="12" height="12">
+                    <rect x="3" y="3" width="10" height="10" fill="currentColor"/>
+                </svg>
+                ${periodName} Dönemi
+            `;
+            section.appendChild(title);
+
+            // Eserleri ekle
+            periods[periodName].forEach(asset => {
+                const button = document.createElement('button');
+                button.className = 'dropdown-item';
+                button.dataset.asset = asset.id;
+                button.innerHTML = `<span class="asset-name">${asset.name}</span>`;
+
+                // Event listener ekle
+                button.addEventListener('click', () => {
+                    selectAsset(asset.id);
+                });
+
+                section.appendChild(button);
+            });
+
+            dropdownContent.appendChild(section);
+        });
+
+        console.log('Dropdown menüsü dinamik olarak oluşturuldu:', Object.keys(periods));
+    }
+
+    /**
+     * Ana görünüm - tüm yarımadayı göster
+     */
+    function showHomeView() {
+        console.log('Ana görünüme dönülüyor...');
+
+        // Location badge'i güncelle
+        if (elements.locationText) {
+            elements.locationText.textContent = 'Tarihi Yarımada - İstanbul';
+        }
+
+        // Cesium viewer'a zoom at
+        CesiumViewer.flyToHome();
+
+        // Asset panel'i kapat
+        closeAssetPanel();
+
+        // Seçili asset'i temizle
+        state.currentAssetId = null;
+    }
+
+    /**
+     * Eseri seç
+     */
+    function selectAsset(assetId) {
+        const asset = AssetsData.getAsset(assetId);
+        if (!asset) {
+            console.error('Eser bulunamadı:', assetId);
+            return;
+        }
+
+        console.log('Eser seçildi:', assetId, asset);
+        state.currentAssetId = assetId;
+
+        // Location badge'i güncelle
+        if (elements.locationText) {
+            elements.locationText.textContent = asset.name;
+        }
+
+        // Asset panel'i aç
+        openAssetPanel(asset);
+
+        // Asset'in modelini vurgula
+        highlightAssetModel(asset);
+
+        // Kamerayı asset'e zoom at (çapraz yukarıdan)
+        zoomToAsset(asset);
+
+        // Orbit modu artık otomatik başlamıyor - kullanıcı manuel olarak aktifleştirmeli
+
+        // Notları yükle
+        loadNotes(assetId);
+    }
+
+    /**
+     * Asset panel'i aç ve bilgileri göster
+     */
+    function openAssetPanel(asset) {
+        // Başlık ve bilgiler
+        elements.assetName.textContent = asset.name;
+        elements.assetPeriod.textContent = asset.period;
+        elements.assetYear.textContent = asset.year;
+        elements.assetPeriodInfo.textContent = asset.period + ' Dönemi';
+        elements.assetFounder.textContent = asset.founder;
+        elements.assetLocation.textContent = asset.location;
+        elements.assetDescription.textContent = asset.description;
+        
+        // 3D model katmanlarını listele
+        renderAssetLayers(asset);
+        
+        // Panel'i aç
+        state.isAssetPanelOpen = true;
+        elements.assetPanel.classList.add('open');
+        
+        updateLoadingStatus('Bilgiler yüklendi');
+    }
+
+    /**
+     * Asset panel'i kapat
+     */
+    function closeAssetPanel() {
+        state.isAssetPanelOpen = false;
+        elements.assetPanel.classList.remove('open');
+    }
+
+    /**
+     * Asset'in 3D model katmanlarını render et
+     */
+    function renderAssetLayers(asset) {
+        elements.assetLayers.innerHTML = '';
+        
+        if (!asset.ionAssetIds || asset.ionAssetIds.length === 0) {
+            elements.assetLayers.innerHTML = '<p style="color: var(--color-text-muted);">3D model yok</p>';
+            return;
+        }
+        
+        asset.ionAssetIds.forEach((layer, index) => {
+            const label = document.createElement('label');
+            label.className = 'layer-item';
+            label.innerHTML = `
+                <input type="checkbox" ${layer.visible ? 'checked' : ''} data-ion-asset-id="${layer.id}">
+                <span class="layer-checkbox"></span>
+                <span class="layer-name">${layer.name}</span>
+                <span class="layer-type">${layer.type}</span>
+            `;
+            
+            const input = label.querySelector('input');
+            input.addEventListener('change', () => {
+                toggleAssetLayer(layer.id, input.checked);
+            });
+            
+            elements.assetLayers.appendChild(label);
+        });
+    }
+
+    /**
+     * Asset model katmanını aç/kapat
+     */
+    function toggleAssetLayer(ionAssetId, visible) {
+        const tileset = state.loadedTilesets[ionAssetId];
+        if (tileset) {
+            tileset.show = visible;
+            console.log(`Tileset ${ionAssetId} görünürlük: ${visible}`);
+        }
+    }
+
+    /**
+     * Asset seçildiğinde modeli vurgula (diğerlerini gizlemeden)
+     */
+    function highlightAssetModel(asset) {
+        // Seçili asset'in modellerini göster
+        for (const layer of asset.ionAssetIds) {
+            const tileset = state.loadedTilesets[layer.id];
+            if (tileset) {
+                tileset.show = true;
+            }
+        }
+    }
+
+    /**
+     * Kamerayı asset'e zoom at
+     */
+    function zoomToAsset(asset) {
+        if (!asset.position) return;
+
+        const destination = Cesium.Cartesian3.fromDegrees(
+            asset.position.lon + 0.0007,        // Longitude offset
+            asset.position.lat - 0.0045,        // Latitude offset
+            250                                // Yükseklik (metre)
+        );
+
+        CesiumViewer.getViewer().camera.flyTo({
+            destination: destination,
+            orientation: {
+                heading: Cesium.Math.toRadians(0),   // Kamera yönü (0=kuzey, 90=doğu, 180=güney, 270=batı)
+                pitch: Cesium.Math.toRadians(-25),     // Yukarı/aşağı açı
+                roll: 0.0
+            },
+            duration: 1.5
+        });
+    }
+
+    /**
+     * Hakkında panelini aç/kapat
+     */
+    function toggleAboutPanel() {
+        if (state.isAboutPanelOpen) {
+            closeAboutPanel();
+        } else {
+            openAboutPanel();
+        }
+    }
+
+    /**
+     * Hakkında panelini aç
+     */
+    function openAboutPanel() {
+        state.isAboutPanelOpen = true;
+        elements.aboutPanel.classList.add('open');
+
+        // Asset panel'i kapat
+        closeAssetPanel();
+
+        // Tüm yarımadayı göster (Cesium kamera hareketi)
+        showHomeView();
+    }
+
+    /**
+     * Hakkında panelini kapat
+     */
+    function closeAboutPanel() {
+        state.isAboutPanelOpen = false;
+        elements.aboutPanel.classList.remove('open');
+    }
+
+    /**
+     * Loading status güncelle
+     */
+    function updateLoadingStatus(message) {
+        if (elements.loaderStatus) {
+            elements.loaderStatus.textContent = message;
+        }
+    }
+
+    /**
+     * Loading ekranını gizle
+     */
+    function hideLoadingScreen() {
+        state.isLoading = false;
+        setTimeout(() => {
+            elements.loadingScreen.classList.add('hidden');
+            elements.app.classList.remove('hidden');
+        }, 500);
     }
 
     /**
@@ -303,7 +590,6 @@ const App = (function() {
             updateConnectionStatus(false);
         }
         
-        // Bağlantı durumu değişikliklerini dinle
         API.onConnectionChange(updateConnectionStatus);
     }
 
@@ -319,120 +605,56 @@ const App = (function() {
     }
 
     /**
-     * Loading durumunu güncelle
-     */
-    function updateLoadingStatus(message) {
-        if (elements.loaderStatus) {
-            elements.loaderStatus.textContent = message;
-        }
-    }
-
-    /**
-     * Loading ekranını gizle
-     */
-    function hideLoadingScreen() {
-        state.isLoading = false;
-        
-        setTimeout(() => {
-            elements.loadingScreen.classList.add('hidden');
-            elements.app.classList.remove('hidden');
-        }, 500);
-    }
-
-    /**
-     * Navigasyon işleyicisi
-     */
-    function handleNavigation(view) {
-        if (state.currentView === view) return;
-        
-        state.currentView = view;
-        
-        // Nav butonlarını güncelle
-        elements.navButtons.forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.view === view);
-        });
-        
-        // Cesium her zaman aktif (tek görünüm)
-        elements.cesiumContainer.classList.add('active');
-        
-        // Location badge'i güncelle
-        updateLocationBadge(view);
-    }
-
-    /**
-     * Location badge'i güncelle
-     */
-    function updateLocationBadge(view) {
-        const cesiumBadge = elements.cesiumContainer?.querySelector('.location-text');
-        
-        if (cesiumBadge) {
-            if (state.interiorMode) {
-                cesiumBadge.textContent = 'Molla Hüsrev Camii - İç Mekan Gezintisi';
-            } else {
-                cesiumBadge.textContent = 'Molla Hüsrev Camii - 3D Görünüm';
-            }
-        }
-    }
-
-    /**
-     * Side panel toggle
-     */
-    function toggleSidePanel() {
-        state.isPanelOpen = !state.isPanelOpen;
-        elements.sidePanel.classList.toggle('open', state.isPanelOpen);
-    }
-
-    /**
-     * Side panel kapat
-     */
-    function closeSidePanel() {
-        state.isPanelOpen = false;
-        elements.sidePanel.classList.remove('open');
-    }
-
-    /**
-     * Basemap panel toggle
-     */
-    function toggleBasemapPanel() {
-        state.isBasemapPanelOpen = !state.isBasemapPanelOpen;
-        elements.basemapPanel.classList.toggle('open', state.isBasemapPanelOpen);
-        
-        // Diğer panelleri kapat
-        if (state.isBasemapPanelOpen) {
-            closeSidePanel();
-        }
-    }
-
-    /**
-     * Basemap panel kapat
-     */
-    function closeBasemapPanel() {
-        state.isBasemapPanelOpen = false;
-        elements.basemapPanel.classList.remove('open');
-    }
-
-    /**
-     * Altlık harita değiştir
+     * Basemap değiştir
      */
     async function handleBasemapChange(basemapId) {
         if (state.currentBasemap === basemapId) return;
-        
-        // UI'ı hemen güncelle (yükleniyor durumu)
-        elements.basemapItems.forEach(item => {
-            item.classList.toggle('active', item.dataset.basemap === basemapId);
+
+        // Update UI
+        document.querySelectorAll('.basemap-option').forEach(option => {
+            option.classList.toggle('active', option.dataset.basemap === basemapId);
         });
-        
-        // Cesium viewer'da altlık haritayı değiştir (async olabilir)
+
+        // Change basemap in Cesium
         const success = await CesiumViewer.setBasemap(basemapId);
-        
+
         if (success !== false) {
             state.currentBasemap = basemapId;
             console.log('Altlık harita değiştirildi:', basemapId);
         } else {
-            // Başarısız olursa eski seçimi geri al
-            elements.basemapItems.forEach(item => {
-                item.classList.toggle('active', item.dataset.basemap === state.currentBasemap);
+            // Revert UI on failure
+            document.querySelectorAll('.basemap-option').forEach(option => {
+                option.classList.toggle('active', option.dataset.basemap === state.currentBasemap);
             });
+        }
+    }
+
+    /**
+     * Katman aç/kapat
+     */
+    function handleLayerToggle(layerType, isVisible) {
+        console.log(`Layer ${layerType} visibility:`, isVisible);
+
+        switch (layerType) {
+            case 'buildings':
+                // Tüm bina modellerini göster/gizle
+                Object.values(state.loadedTilesets).forEach(tileset => {
+                    tileset.show = isVisible;
+                });
+                break;
+            case 'terrain':
+                CesiumViewer.setTerrain(isVisible);
+                break;
+            case 'labels':
+                // Etiketleri göster/gizle (Cesium özelliği)
+                if (CesiumViewer.getViewer()) {
+                    CesiumViewer.getViewer().scene.globe.enableLighting = isVisible;
+                }
+                break;
+            case 'borders':
+                // Sınırları göster/gizle (özel uygulama gerekli)
+                console.log('Borders toggle not yet implemented');
+                break;
         }
     }
 
@@ -456,34 +678,26 @@ const App = (function() {
     }
 
     /**
-     * Home butonuna tıklama
+     * Home butonuna tıkla
      */
     function handleHomeClick() {
-        if (state.interiorMode && typeof InteriorNavigation !== 'undefined') {
-            // İç mekan modundayken girişe git
-            InteriorNavigation.goToEntrance();
-        } else {
-            // Normal modda ana görünüme dön
-            CesiumViewer.flyToHome();
-        }
+        showHomeView();
     }
 
     /**
      * Orbit modunu aç/kapat
      */
     function handleOrbitToggle() {
-        if (state.currentView === 'cesium' || state.currentView === 'split') {
-            state.orbitLocked = !state.orbitLocked;
-            
-            if (state.orbitLocked) {
-                CesiumViewer.lockOrbitToModel();
-                elements.btnOrbit.classList.add('active');
-                elements.btnOrbit.title = 'Orbit Kilidini Kaldır (Serbest Hareket)';
-            } else {
-                CesiumViewer.unlockOrbit();
-                elements.btnOrbit.classList.remove('active');
-                elements.btnOrbit.title = 'Model Etrafında Dön (Orbit Kilitle)';
-            }
+        state.orbitLocked = !state.orbitLocked;
+        
+        if (state.orbitLocked) {
+            CesiumViewer.lockOrbitToModel();
+            elements.btnOrbit.classList.add('active');
+            elements.btnOrbit.title = 'Orbit Kilidini Kaldır (Serbest Hareket)';
+        } else {
+            CesiumViewer.unlockOrbit();
+            elements.btnOrbit.classList.remove('active');
+            elements.btnOrbit.title = 'Model Etrafında Dön (Orbit Kilitle)';
         }
     }
 
@@ -509,26 +723,16 @@ const App = (function() {
     }
 
     /**
-     * Katman toggle
+     * Point boyutu değişikliği
      */
-    function handleLayerToggle(layerId, visible) {
-        console.log(`Katman ${layerId}: ${visible ? 'açık' : 'kapalı'}`);
-        
-        // Asset ID'yi bul
-        const checkbox = document.querySelector(`input[data-layer="${layerId}"]`);
-        const assetId = checkbox?.dataset.assetId;
-        
-        if (assetId && state.loadedTilesets[assetId]) {
-            state.loadedTilesets[assetId].show = visible;
-            console.log(`Tileset ${assetId} görünürlük: ${visible}`);
-        } else {
-            // Fallback: CesiumViewer'ın setLayerVisibility'sini kullan
-            CesiumViewer.setLayerVisibility(layerId, visible);
+    function handlePointSizeChange(size) {
+        if (state.cesiumReady) {
+            CesiumViewer.setPointSize(size);
         }
     }
 
     // ============================================
-    // NOTLAR (Notes) İşlevleri
+    // NOTES (Notlar) İşlevleri
     // ============================================
 
     /**
@@ -538,7 +742,6 @@ const App = (function() {
         const count = elements.noteContent.value.length;
         elements.charCount.textContent = count;
         
-        // 450'den fazla karakterde uyarı rengi
         if (count > 450) {
             elements.charCount.parentElement.style.color = 'var(--color-warning)';
         } else {
@@ -554,7 +757,6 @@ const App = (function() {
         const content = elements.noteContent.value.trim();
         const author = elements.noteAuthor.value.trim();
         
-        // Validasyon
         if (!title) {
             showToast('Lütfen bir başlık girin', 'error');
             elements.noteTitle.focus();
@@ -567,92 +769,56 @@ const App = (function() {
             return;
         }
         
-        // Kaydetme durumunu göster
         elements.btnSaveNote.disabled = true;
         elements.btnSaveNote.classList.add('saving');
-        elements.btnSaveNote.innerHTML = `
-            <svg class="spinning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                <polyline points="23 4 23 10 17 10"/>
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-            </svg>
-            Kaydediliyor...
-        `;
         
         try {
-            // Kamera pozisyonunu al (3D konum için)
-            let x = 0, y = 0, z = 0;
-            if (state.cesiumReady) {
-                const viewer = CesiumViewer.getViewer();
-                if (viewer && viewer.camera) {
-                    const pos = viewer.camera.positionCartographic;
-                    x = Cesium.Math.toDegrees(pos.longitude);
-                    y = Cesium.Math.toDegrees(pos.latitude);
-                    z = pos.height;
-                }
-            }
+            const noteText = title + '\n\n' + content;
+            const assetId = state.currentAssetId || 1;
             
-            // API'ye gönder
             const noteData = {
-                yapi_id: state.currentYapiId,
-                baslik: title,
-                aciklama: content,
-                x: x,
-                y: y,
-                z: z,
-                olusturan: author || 'Anonim Kullanıcı'
+                asset_id: assetId,
+                user_identifier: author || 'Anonim Kullanıcı',
+                note_text: noteText
             };
             
             await API.addNote(noteData);
             
-            // Başarılı
-            showToast('Notunuz başarıyla kaydedildi! ✨', 'success');
+            showToast('Notunuz başarıyla kaydedildi.', 'success');
             
-            // Formu temizle
             elements.noteTitle.value = '';
             elements.noteContent.value = '';
             elements.noteAuthor.value = '';
             updateCharCount();
             
-            // Notları yeniden yükle
-            await loadNotes();
+            await loadNotes(assetId);
             
         } catch (error) {
             console.error('Not kaydedilemedi:', error);
             showToast('Not kaydedilemedi. Lütfen tekrar deneyin.', 'error');
         } finally {
-            // Butonu eski haline getir
             elements.btnSaveNote.disabled = false;
             elements.btnSaveNote.classList.remove('saving');
-            elements.btnSaveNote.innerHTML = `
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                    <polyline points="17 21 17 13 7 13 7 21"/>
-                    <polyline points="7 3 7 8 15 8"/>
-                </svg>
-                Notu Kaydet
-            `;
         }
     }
 
     /**
      * Notları yükle
      */
-    async function loadNotes() {
-        // Yenileme butonuna animasyon ekle
+    async function loadNotes(assetId = null) {
         if (elements.btnRefreshNotes) {
             elements.btnRefreshNotes.classList.add('spinning');
         }
         
         try {
-            const notes = await API.getNotes(state.currentYapiId);
+            const noteAssetId = assetId || state.currentAssetId || 1;
+            const notes = await API.getNotes(noteAssetId);
             state.notes = notes || [];
             
-            // Sayıyı güncelle
             if (elements.notesCountNumber) {
                 elements.notesCountNumber.textContent = state.notes.length;
             }
             
-            // Notları render et
             renderNotes();
             
         } catch (error) {
@@ -660,7 +826,6 @@ const App = (function() {
             state.notes = [];
             renderNotes();
         } finally {
-            // Animasyonu kaldır
             if (elements.btnRefreshNotes) {
                 elements.btnRefreshNotes.classList.remove('spinning');
             }
@@ -674,7 +839,6 @@ const App = (function() {
         if (!elements.notesItems) return;
         
         if (state.notes.length === 0) {
-            // Boş durum
             elements.notesItems.innerHTML = `
                 <div class="notes-empty">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
@@ -691,25 +855,31 @@ const App = (function() {
             return;
         }
         
-        // Notları ters sırayla göster (en yeni en üstte)
         const sortedNotes = [...state.notes].reverse();
         
-        elements.notesItems.innerHTML = sortedNotes.map(note => `
-            <div class="note-card" data-note-id="${note.id}">
-                <div class="note-card-header">
-                    <div class="note-card-title">${escapeHtml(note.baslik)}</div>
+        elements.notesItems.innerHTML = sortedNotes.map(note => {
+            const noteText = note.note_text || '';
+            const lines = noteText.split('\n');
+            const title = lines[0] || 'Not';
+            const content = lines.slice(1).join('\n').trim();
+            
+            return `
+                <div class="note-card" data-note-id="${note.id}">
+                    <div class="note-card-header">
+                        <div class="note-card-title">${escapeHtml(title)}</div>
+                    </div>
+                    ${content ? `<div class="note-card-content">${escapeHtml(content)}</div>` : ''}
+                    <div class="note-card-meta">
+                        <span class="note-card-author">${escapeHtml(note.user_identifier || 'Anonim')}</span>
+                        <span class="note-card-date">${formatDate(note.created_at)}</span>
+                    </div>
                 </div>
-                ${note.aciklama ? `<div class="note-card-content">${escapeHtml(note.aciklama)}</div>` : ''}
-                <div class="note-card-meta">
-                    <span class="note-card-author">${escapeHtml(note.olusturan || 'Anonim')}</span>
-                    <span class="note-card-date">${formatDate(note.olusturulma_tarihi)}</span>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     /**
-     * HTML karakterlerini escape et (XSS koruması)
+     * HTML escape
      */
     function escapeHtml(text) {
         if (!text) return '';
@@ -750,210 +920,31 @@ const App = (function() {
      * Toast mesajı göster
      */
     function showToast(message, type = 'success') {
-        // Mevcut toast varsa kaldır
         const existingToast = document.querySelector('.note-toast');
         if (existingToast) {
             existingToast.remove();
         }
         
-        // Yeni toast oluştur
         const toast = document.createElement('div');
         toast.className = `note-toast ${type}`;
         toast.textContent = message;
         document.body.appendChild(toast);
         
-        // Animasyonla göster
         requestAnimationFrame(() => {
             toast.classList.add('show');
         });
         
-        // 3 saniye sonra kaldır
         setTimeout(() => {
             toast.classList.remove('show');
             setTimeout(() => toast.remove(), 400);
         }, 3000);
     }
 
-    // ============================================
-    // İÇ MEKAN NAVİGASYON İşlevleri
-    // ============================================
-
-    /**
-     * İç mekana giriş
-     */
-    async function handleEnterInterior() {
-        if (!state.cesiumReady) {
-            showToast('Cesium Viewer henüz hazır değil', 'error');
-            return;
-        }
-
-        // Interior Navigation modülünü başlat (eğer yoksa)
-        if (typeof InteriorNavigation !== 'undefined') {
-            const viewer = CesiumViewer.getViewer();
-            
-            // Modülü başlat
-            if (!InteriorNavigation.isInsideMode()) {
-                InteriorNavigation.initialize(viewer);
-            }
-            
-            // İç mekan moduna gir
-            await InteriorNavigation.enterInterior(state.currentYapiId, state.interiorIonAssetId);
-            
-            state.interiorMode = true;
-            
-            // Giriş butonunu gizle
-            if (elements.btnEnterInterior) {
-                elements.btnEnterInterior.classList.add('hidden');
-            }
-            
-            // Location badge güncelle
-            const badge = document.querySelector('.viewer-overlay .location-text');
-            if (badge) {
-                badge.textContent = 'Molla Hüsrev Camii - İç Mekan Gezintisi';
-            }
-            
-            showToast('İç mekan moduna geçildi. İyi gezintiler! 🏛️', 'success');
-        } else {
-            console.warn('InteriorNavigation modülü yüklenmedi');
-            showToast('İç mekan modülü yüklenemedi', 'error');
-        }
-    }
-
-    /**
-     * İç mekandan çıkış (public API için)
-     */
-    function handleExitInterior() {
-        state.interiorMode = false;
-        
-        // Giriş butonunu göster
-        if (elements.btnEnterInterior) {
-            elements.btnEnterInterior.classList.remove('hidden');
-            elements.btnEnterInterior.style.display = '';
-        }
-        
-        // Location badge güncelle
-        updateLocationBadge('cesium');
-        
-        console.log('İç mekan modundan çıkıldı, buton tekrar gösterildi');
-    }
-
-    /**
-     * Kalite değişikliği
-     */
-    function handleQualityChange(quality) {
-        state.renderQuality = quality;
-        CesiumViewer.setQuality(quality);
-    }
-
-    /**
-     * Point boyutu değişikliği
-     */
-    function handlePointSizeChange(size) {
-        // Cesium viewer için (3D Tiles point cloud desteği)
-        if (state.cesiumReady) {
-            CesiumViewer.setPointSize(size);
-        }
-    }
-
-    /**
-     * Klavye kısayolları
-     */
-    function handleKeyboard(e) {
-        // Input alanlarında yazarken kısayolları devre dışı bırak
-        const activeElement = document.activeElement;
-        const isTyping = activeElement && (
-            activeElement.tagName === 'INPUT' || 
-            activeElement.tagName === 'TEXTAREA' ||
-            activeElement.isContentEditable
-        );
-        
-        if (isTyping) {
-            return; // Yazı yazılıyorsa kısayolları çalıştırma
-        }
-        
-        // Ctrl+H: Ana görünüme dön
-        if (e.ctrlKey && e.key === 'h') {
-            e.preventDefault();
-            handleHomeClick();
-        }
-        // Ctrl+I: İç mekan moduna gir/çık
-        if (e.ctrlKey && e.key === 'i') {
-            e.preventDefault();
-            if (state.interiorMode) {
-                handleExitInterior();
-            } else {
-                handleEnterInterior();
-            }
-        }
-        // Ctrl+L: Katmanlar panelini aç/kapat
-        if (e.ctrlKey && e.key === 'l') {
-            e.preventDefault();
-            toggleSidePanel();
-        }
-    }
-
-    /**
-     * Tileset URL ile yükle
-     */
-    async function loadTileset(url) {
-        try {
-            await CesiumViewer.loadTileset(url);
-            console.log('Tileset yüklendi:', url);
-        } catch (error) {
-            console.error('Tileset yüklenemedi:', error);
-        }
-    }
-
-    /**
-     * Ion Asset ID ile yükle
-     */
-    async function loadFromIonAssetId(assetId, options = {}) {
-        try {
-            const tileset = await CesiumViewer.loadFromIonAssetId(assetId, options);
-            state.loadedTilesets[assetId.toString()] = tileset;
-            console.log('Ion Asset yüklendi:', assetId);
-            return tileset;
-        } catch (error) {
-            console.error('Ion Asset yüklenemedi:', error);
-        }
-    }
-
-    /**
-     * Belirli bir tileset'in görünürlüğünü ayarla
-     */
-    function setTilesetVisibility(assetId, visible) {
-        const tileset = state.loadedTilesets[assetId.toString()];
-        if (tileset) {
-            tileset.show = visible;
-        }
-    }
-
     // Public API
     return {
         initialize,
-        loadTileset,
-        loadFromIonAssetId,
-        setTilesetVisibility,
-        
-        // State
-        getState: () => ({ ...state }),
-        getLoadedTilesets: () => ({ ...state.loadedTilesets }),
-        
-        // Navigation
-        switchView: handleNavigation,
-        
-        // Basemap
-        setBasemap: handleBasemapChange,
-        toggleBasemapPanel,
-        
-        // Modals
-        openModal,
-        closeAllModals,
-        
-        // Interior Navigation
-        enterInterior: handleEnterInterior,
-        exitInterior: handleExitInterior,
-        isInteriorMode: () => state.interiorMode
+        selectAsset,
+        showHomeView
     };
 })();
 
@@ -962,6 +953,5 @@ document.addEventListener('DOMContentLoaded', () => {
     App.initialize();
 });
 
-// Global erişim için
+// Global erişim
 window.App = App;
-

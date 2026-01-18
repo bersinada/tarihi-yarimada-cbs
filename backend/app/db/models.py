@@ -66,6 +66,7 @@ class HeritageAsset(Base):
     model_url = Column(String(500))                               # 3D Tiles or Splat URL
     model_type = Column(String(20))                               # 'SPLAT', 'MESH', '3DTILES'
     model_lod = Column(String(10))                                # 'LOD1', 'LOD2', 'LOD3'
+    cesium_ion_asset_id = Column(Integer)                         # Cesium Ion Asset ID
 
     # === Status ===
     is_visitable = Column(Boolean, default=True)

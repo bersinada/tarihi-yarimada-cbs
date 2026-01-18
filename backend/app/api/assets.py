@@ -45,6 +45,7 @@ def asset_to_response(asset: HeritageAsset, include_location: bool = False) -> d
         "model_url": asset.model_url,
         "model_type": asset.model_type,
         "model_lod": asset.model_lod,
+        "cesium_ion_asset_id": asset.cesium_ion_asset_id,
         "is_visitable": asset.is_visitable,
         "data_source": asset.data_source,
         "created_at": asset.created_at,
@@ -73,7 +74,7 @@ def get_asset_coordinates(db: Session, asset_id: int) -> tuple:
 # Asset List & Search
 # ==================================================
 
-@router.get("", response_model=List[AssetResponse])
+@router.get("", response_model=List[AssetWithLocation])
 async def get_assets(
     asset_type: Optional[str] = None,
     historical_period: Optional[str] = None,
@@ -110,7 +111,17 @@ async def get_assets(
         )
 
     assets = query.offset(offset).limit(limit).all()
-    return [asset_to_response(a) for a in assets]
+
+    # Koordinatları ekle
+    result = []
+    for asset in assets:
+        asset_dict = asset_to_response(asset)
+        lon, lat = get_asset_coordinates(db, asset.id)
+        asset_dict['longitude'] = lon
+        asset_dict['latitude'] = lat
+        result.append(asset_dict)
+
+    return result
 
 
 @router.get("/geojson", response_model=AssetFeatureCollection)

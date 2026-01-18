@@ -5,14 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tarihi Yarımada CBS | İstanbul Kültürel Miras</title>
     
-    <!-- Fonts -->
+    <!-- Fonts - Ottoman Palace Style -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Raleway:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cinzel:wght@400;600;700&family=Raleway:wght@300;400;500;600&display=swap" rel="stylesheet">
     
     <!-- Cesium JS -->
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Cesium.js"></script>
     <link href="https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    
+    <!-- Leaflet for 2D Map -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     
     <!-- Custom Styles -->
     <link rel="stylesheet" href="css/styles.css">
@@ -21,13 +25,24 @@
     <!-- Loading Screen -->
     <div id="loading-screen" class="loading-screen">
         <div class="loader-content">
-            <div class="ottoman-pattern"></div>
+            <!-- Logo PNG -->
+            <img src="assets/logo.png" alt="Tarihi Yarımada Logo" class="loader-logo">
             <h1 class="loader-title">Tarihi Yarımada</h1>
             <p class="loader-subtitle">Kültürel Miras CBS Platformu</p>
-            <div class="loader-bar">
-                <div class="loader-progress"></div>
+
+            <!-- Tarihi Yarımada Silüeti Yüklenme Çizgisi -->
+            <div class="skyline-loader">
+                <svg class="skyline-svg" viewBox="0 0 800 80" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+                    <path class="skyline-path" d="M0,80 L0,65 L20,65 L22,50 L24,20 L26,50 L28,65 L45,65 Q55,45 65,65 L80,65 L82,55 L84,25 L86,55 L88,65 L110,65 L110,50 Q125,30 140,50 L140,65 L160,65 L160,40 Q180,15 200,40 L200,65 L220,65 L222,45 L224,15 L226,45 L228,65 L250,65 Q270,35 290,65 L310,65 L312,50 L314,18 L316,50 L318,65 L345,65 L345,35 Q375,5 405,35 L405,65 L425,65 L427,50 L429,15 L431,50 L433,65 L455,65 L455,50 Q475,25 495,50 L495,65 L520,65 L520,25 Q555,-5 590,25 L590,65 L615,65 L617,45 L619,10 L621,45 L623,65 L655,65 L655,40 Q685,20 715,40 L715,65 L740,65 L742,55 L744,30 L746,55 L748,65 L780,65 Q790,50 800,65 L800,80 Z"
+                          fill="none"
+                          stroke="var(--color-accent)"
+                          stroke-width="2.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"/>
+                </svg>
             </div>
-            <p class="loader-status">Yükleniyor...</p>
+
+            <p class="loader-status">Hazırlanıyor...</p>
         </div>
     </div>
 
@@ -35,30 +50,70 @@
     <div id="app" class="app hidden">
         <!-- Header -->
         <header class="header">
+            <!-- İstanbul Silüeti PNG -->
+            <img src="assets/silhouette.png" alt="İstanbul Tarihi Yarımada Silüeti" class="header-silhouette-center">
+
             <div class="header-left">
                 <div class="logo">
-                    <svg class="logo-icon" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="25" cy="25" r="23" stroke="currentColor" stroke-width="2"/>
-                        <path d="M25 5 L25 15 M25 35 L25 45 M5 25 L15 25 M35 25 L45 25" stroke="currentColor" stroke-width="2"/>
-                        <circle cx="25" cy="25" r="8" stroke="currentColor" stroke-width="2"/>
-                        <path d="M15 10 Q25 20 35 10 M15 40 Q25 30 35 40" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                    </svg>
+                    <!-- Logo PNG -->
+                    <img src="assets/logo.png" alt="Tarihi Yarımada Logo" class="logo-icon">
+
                     <div class="logo-text">
                         <span class="logo-title">Tarihi Yarımada</span>
-                        <span class="logo-tagline">İstanbul CBS</span>
+                        <span class="logo-tagline">Kültürel Miras CBS Platformu</span>
                     </div>
                 </div>
             </div>
             
-            <!-- Navigasyon artık sadece tek görünüm - İç mekan gezintisi ayrı butonla yapılıyor -->
-            <nav class="header-nav">
-                <button class="nav-btn active" data-view="cesium">
-                    <span class="nav-icon">🏛️</span>
-                    <span class="nav-text">3D Görünüm</span>
-                </button>
-            </nav>
-            
+            <!-- Main Navigation - Moved to Header Right -->
             <div class="header-right">
+                <!-- Eserler Dropdown -->
+                <div class="nav-dropdown">
+                    <button class="nav-btn dropdown-toggle">
+                        <span class="nav-text">Eserler</span>
+                        <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-content">
+                            <!-- Osmanlı Dönemi -->
+                            <div class="dropdown-section">
+                                <h4 class="dropdown-section-title">
+                                    <svg class="period-icon" viewBox="0 0 16 16" width="12" height="12">
+                                        <rect x="3" y="3" width="10" height="10" fill="currentColor"/>
+                                    </svg>
+                                    Osmanlı Dönemi (1453-1923)
+                                </h4>
+                                <button class="dropdown-item" data-asset="sultanahmet">
+                                    <span class="asset-name">Sultanahmet Camii</span>
+                                </button>
+                                <button class="dropdown-item" data-asset="topkapi">
+                                    <span class="asset-name">Topkapı Sarayı</span>
+                                </button>
+                                <button class="dropdown-item" data-asset="suleymaniye">
+                                    <span class="asset-name">Süleymaniye Camii</span>
+                                </button>
+                            </div>
+                            <!-- Bizans Dönemi -->
+                            <div class="dropdown-section">
+                                <h4 class="dropdown-section-title">
+                                    <svg class="period-icon" viewBox="0 0 16 16" width="12" height="12">
+                                        <rect x="3" y="3" width="10" height="10" fill="currentColor"/>
+                                    </svg>
+                                    Bizans Dönemi (330-1453)
+                                </h4>
+                                <button class="dropdown-item" data-asset="ayasofya">
+                                    <span class="asset-name">Ayasofya-i Kebir</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hakkında Button -->
+                <button class="nav-btn" id="btn-about">
+                    <span class="nav-text">Hakkında</span>
+                </button>
+                
                 <button class="icon-btn" id="btn-basemap" title="Altlık Harita">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/>
@@ -71,13 +126,6 @@
                         <polygon points="12 2 2 7 12 12 22 7 12 2"/>
                         <polyline points="2 17 12 22 22 17"/>
                         <polyline points="2 12 12 17 22 12"/>
-                    </svg>
-                </button>
-                <button class="icon-btn" id="btn-info" title="Bilgi">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <line x1="12" y1="16" x2="12" y2="12"/>
-                        <line x1="12" y1="8" x2="12.01" y2="8"/>
                     </svg>
                 </button>
                 <button class="icon-btn" id="btn-settings" title="Ayarlar">
@@ -96,94 +144,124 @@
                 <div id="cesiumViewer" class="viewer"></div>
                 <div class="viewer-overlay">
                     <div class="location-badge">
-                        <span class="location-icon">📍</span>
-                        <span class="location-text">Molla Hüsrev Camii</span>
+                        <span class="location-text" id="location-text">Tarihi Yarımada - İstanbul</span>
                     </div>
+                </div>
+                <!-- Viewer Controls -->
+                <div class="viewer-controls">
+                    <button class="viewer-control-btn" id="btn-orbit" title="Etrafında Dön">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+                            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+                            <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                            <path d="M18 5v1"/>
+                            <path d="M6 5v1"/>
+                            <path d="M16 19l2 2 4-4" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <button class="viewer-control-btn" id="btn-home" title="Ana Görünüm">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                            <polyline points="9 22 9 12 15 12 15 22"/>
+                        </svg>
+                    </button>
+                    <button class="viewer-control-btn" id="btn-zoom-in" title="Yakınlaş">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                            <circle cx="11" cy="11" r="8"/>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            <line x1="11" y1="8" x2="11" y2="14"/>
+                            <line x1="8" y1="11" x2="14" y2="11"/>
+                        </svg>
+                    </button>
+                    <button class="viewer-control-btn" id="btn-zoom-out" title="Uzaklaş">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                            <circle cx="11" cy="11" r="8"/>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            <line x1="8" y1="11" x2="14" y2="11"/>
+                        </svg>
+                    </button>
+                    <button class="viewer-control-btn" id="btn-fullscreen" title="Tam Ekran">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                            <polyline points="15 3 21 3 21 9"/>
+                            <polyline points="9 21 3 21 3 15"/>
+                            <line x1="21" y1="3" x2="14" y2="10"/>
+                            <line x1="3" y1="21" x2="10" y2="14"/>
+                        </svg>
+                    </button>
                 </div>
             </div>
             
         </main>
 
-        <!-- Side Panel -->
-        <aside id="side-panel" class="side-panel">
+        <!-- Asset Info Panel (Right Side) - Başlangıçta kapalı -->
+        <aside id="asset-panel" class="asset-panel">
             <div class="panel-header">
-                <h2 class="panel-title">Katmanlar</h2>
-                <button class="panel-close" id="panel-close">×</button>
+                <h2 class="panel-title" id="asset-panel-title">Yapı Bilgileri</h2>
+                <button class="panel-close" id="asset-panel-close">×</button>
             </div>
             <div class="panel-content">
-                <!-- Layers Section -->
-                <section class="panel-section">
-                    <h3 class="section-title">3D Modeller</h3>
-                    <div class="layer-list">
-                        <label class="layer-item">
-                            <input type="checkbox" checked data-layer="exterior" data-asset-id="4270999">
-                            <span class="layer-checkbox"></span>
-                            <span class="layer-name">Molla Hüsrev - Dış Cephe</span>
-                            <span class="layer-type">3D Tiles</span>
-                        </label>
-                        <label class="layer-item">
-                            <input type="checkbox" data-layer="interior-1" data-asset-id="4271001">
-                            <span class="layer-checkbox"></span>
-                            <span class="layer-name">Molla Hüsrev - İç Mekan 1</span>
-                            <span class="layer-type">3D Tiles</span>
-                        </label>
-                        <label class="layer-item">
-                            <input type="checkbox" data-layer="interior-2" data-asset-id="4275532">
-                            <span class="layer-checkbox"></span>
-                            <span class="layer-name">Molla Hüsrev - İç Mekan 2</span>
-                            <span class="layer-type">3D Tiles</span>
-                        </label>
-                        <label class="layer-item">
-                            <input type="checkbox" data-layer="sadirvan" data-asset-id="4277312">
-                            <span class="layer-checkbox"></span>
-                            <span class="layer-name">Şadırvan</span>
-                            <span class="layer-type">3D Tiles</span>
-                        </label>
-                        <label class="layer-item">
-                            <input type="checkbox" data-layer="sultanahmet" data-asset-id="4318496">
-                            <span class="layer-checkbox"></span>
-                            <span class="layer-name">Sultanahmet Camii</span>
-                            <span class="layer-type">3D Tiles</span>
-                        </label>
+                <!-- Asset Header Info -->
+                <section class="panel-section asset-section">
+                    <div class="asset-header-info">
+                        <h3 id="asset-name" class="asset-main-title">Seçili Eseri Görüntüleyin</h3>
+                        <span class="asset-period-badge" id="asset-period">Tarihi Eser</span>
                     </div>
                 </section>
 
-                <!-- Heritage Info Section -->
+                <!-- Photo Gallery Placeholder -->
                 <section class="panel-section">
-                    <h3 class="section-title">Yapı Bilgileri</h3>
-                    <div class="info-card">
-                        <div class="info-header">
-                            <h4>Molla Hüsrev Camii</h4>
-                            <span class="info-badge">Tarihi Eser</span>
+                    <h3 class="section-title">Fotoğraf Galerisi</h3>
+                    <div class="photo-gallery-placeholder">
+                        <div class="gallery-placeholder-inner">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <polyline points="21 15 16 10 5 21"/>
+                            </svg>
+                            <p>Fotoğraf galerisi yakında eklenecek</p>
                         </div>
+                    </div>
+                </section>
+
+                <!-- Asset Details -->
+                <section class="panel-section">
+                    <h3 class="section-title">Detaylı Bilgi</h3>
+                    <div class="info-card">
                         <div class="info-body">
                             <div class="info-row">
                                 <span class="info-label">Yapım Yılı</span>
-                                <span class="info-value">1460</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">Banisi</span>
-                                <span class="info-value">Şeyhülislam Molla Hüsrev</span>
+                                <span class="info-value" id="asset-year">-</span>
                             </div>
                             <div class="info-row">
                                 <span class="info-label">Dönem</span>
-                                <span class="info-value">Osmanlı - Fatih Dönemi</span>
+                                <span class="info-value" id="asset-period-info">-</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Banisi/Mimarı</span>
+                                <span class="info-value" id="asset-founder">-</span>
                             </div>
                             <div class="info-row">
                                 <span class="info-label">Konum</span>
-                                <span class="info-value">Fatih, İstanbul</span>
+                                <span class="info-value" id="asset-location">-</span>
                             </div>
-                            <div class="info-row">
-                                <span class="info-label">Açıklama </span>
-                                <span class="info-value">    Fatih Sultan Mehmed döneminin ünlü Şeyhülislamı Molla Hüsrev tarafından 1460 yılında yaptırılan bu cami, klasik Osmanlı mimarisinin erken dönem örneklerinden biridir. Molla Hüsrev, Fatih'in hocası olup İslam hukuku alanındaki eserleriyle tanınır. Cami, medrese ve türbesiyle birlikte bir külliye olarak inşa edilmiştir.</span>
+                            <div class="info-description">
+                                <p id="asset-description">Detaylı bilgi yüklenecek...</p>
                             </div>
                         </div>
                     </div>
                 </section>
 
-                <!-- Notes Section - Kullanıcı Dostu Not Ekleme -->
+                <!-- 3D Model Layers -->
                 <section class="panel-section">
-                    <h3 class="section-title">📝 Notlarım</h3>
+                    <h3 class="section-title">3D Modeller</h3>
+                    <div class="layer-list" id="asset-layers">
+                        <!-- Model katmanları dinamik yüklenecek -->
+                    </div>
+                </section>
+
+                <!-- Notes Section -->
+                <section class="panel-section">
+                    <h3 class="section-title">Notlarım</h3>
                     <div class="notes-container">
                         <!-- Not Ekleme Formu -->
                         <div class="note-form">
@@ -192,7 +270,7 @@
                                 <span class="input-hint">Kısa ve açıklayıcı bir başlık girin</span>
                             </div>
                             <div class="note-input-group">
-                                <textarea id="note-content" class="note-textarea" placeholder="Notunuzu buraya yazın... &#10;&#10;Örnek: Bu yapının kubbesi Osmanlı mimarisinin en güzel örneklerinden biridir." rows="4" maxlength="500"></textarea>
+                                <textarea id="note-content" class="note-textarea" placeholder="Notunuzu buraya yazın..." rows="4" maxlength="500"></textarea>
                                 <span class="char-counter"><span id="char-count">0</span>/500</span>
                             </div>
                             <div class="note-input-group">
@@ -239,100 +317,122 @@
             </div>
         </aside>
 
-        <!-- Info Modal -->
-        <div id="info-modal" class="modal">
+        <!-- About Panel (Kenardan açılır) -->
+        <aside id="about-panel" class="about-panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Tarihi Yarımada Hakkında</h2>
+                <button class="panel-close" id="about-close">×</button>
+            </div>
+            <div class="panel-content about-panel-content">
+                <section class="panel-section">
+                    <h3 class="section-title">İstanbul Tarihi Yarımada</h3>
+                    <div class="about-text">
+                        <p>Tarihi Yarımada, İstanbul'un Avrupa yakasında yer alan ve yaklaşık 2500 yıllık tarihçe barındıran bölgedir. Bizans döneminin başkenti Konstantinopolis'ten, Osmanlı İmparatorluğu döneminde İstanbul olarak anılan bu bölge, önemli tarihi yapıları ile bilinir.</p>
+                    </div>
+                </section>
+
+                <section class="panel-section">
+                    <h3 class="section-title">Bizans Dönemi (330-1453)</h3>
+                    <div class="about-text">
+                        <p>Konstantinopolis'in kurulduğu bu dönemde Ayasofya, Hipodrom ve birçok önemli yapı inşa edilmiştir. Şehir, ilk Hristiyanlık ve Orta Çağ mimarisinin merkezi olmuştur.</p>
+                    </div>
+                </section>
+
+                <section class="panel-section">
+                    <h3 class="section-title">Osmanlı Dönemi (1453-1923)</h3>
+                    <div class="about-text">
+                        <p>Fatih Sultan Mehmed'in fethi ile başlayan bu dönem, Osmanlı mimarisinin en görkemli yapılarının inşasını gördü. Süleymaniye Camii, Sultanahmet Camii ve Topkapı Sarayı bu dönemin en önemli eserleridir.</p>
+                    </div>
+                </section>
+
+                <section class="panel-section">
+                    <h3 class="section-title">UNESCO Dünya Mirası</h3>
+                    <div class="about-text">
+                        <p>Tarihi Yarımada, 1985 yılından beri UNESCO Dünya Kültür Mirası listesine kayıtlıdır.</p>
+                    </div>
+                </section>
+
+                <section class="panel-section">
+                    <div class="heritage-stats">
+                        <div class="stat-item">
+                            <span class="stat-number">2500+</span>
+                            <span class="stat-label">Yıllık Tarih</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">20+</span>
+                            <span class="stat-label">Tarihi Eser</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">4</span>
+                            <span class="stat-label">İmparatorluk</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </aside>
+
+
+        <!-- Basemap Modal -->
+        <div id="basemap-modal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>Proje Hakkında</h2>
+                    <h2>Altlık Harita</h2>
                     <button class="modal-close">×</button>
                 </div>
                 <div class="modal-body">
-                    <div class="modal-section">
-                        <h3>🏛️ Tarihi Yarımada CBS Projesi</h3>
-                        <p>Bu platform, İstanbul Tarihi Yarımada'daki kültürel miras yapılarının 3D modellerini ve nokta bulutu verilerini web ortamında sunmak için geliştirilmiştir.</p>
-                    </div>
-                    <div class="modal-section">
-                        <h3>🛠️ Kullanılan Teknolojiler</h3>
-                        <div class="tech-grid">
-                            <div class="tech-item">
-                                <strong>Cesium JS</strong>
-                                <span>3D Tiles & İç Mekan</span>
-                            </div>
-                            <div class="tech-item">
-                                <strong>PostGIS</strong>
-                                <span>Mekansal Veritabanı</span>
-                            </div>
-                            <div class="tech-item">
-                                <strong>FastAPI</strong>
-                                <span>Backend API</span>
-                            </div>
-                            <div class="tech-item">
-                                <strong>INSPIRE/TUCBS</strong>
-                                <span>Standart Uyumu</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-section">
-                        <h3>📋 Standartlar</h3>
-                        <p>INSPIRE, TUCBS, ISO/TC, CORINE standartlarına uygun olarak geliştirilmiştir.</p>
+                    <div class="basemap-grid">
+                        <button class="basemap-option active" data-basemap="satellite">
+                            <div class="basemap-preview satellite-preview"></div>
+                            <span>Uydu Görüntüsü</span>
+                        </button>
+                        <button class="basemap-option" data-basemap="osm">
+                            <div class="basemap-preview default-preview"></div>
+                            <span>Sokak Haritası</span>
+                        </button>
+                        <button class="basemap-option" data-basemap="cartoDark">
+                            <div class="basemap-preview dark-preview"></div>
+                            <span>Karanlık Tema</span>
+                        </button>
+                        <button class="basemap-option" data-basemap="cartoPositron">
+                            <div class="basemap-preview terrain-preview"></div>
+                            <span>Açık Minimal</span>
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Basemap Panel -->
-        <div id="basemap-panel" class="basemap-panel">
-            <div class="basemap-header">
-                <h3>Altlık Harita</h3>
-                <button class="basemap-close" id="basemap-close">×</button>
-            </div>
-            <div class="basemap-content">
-                <div class="basemap-category">
-                    <h4>Uydu Görüntüsü</h4>
-                    <div class="basemap-grid">
-                        <button class="basemap-item active" data-basemap="satellite">
-                            <div class="basemap-preview satellite"></div>
-                            <span>Uydu Görüntüsü</span>
-                        </button>
-                    </div>
+        <!-- Layers Modal -->
+        <div id="layers-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Katmanlar</h2>
+                    <button class="modal-close">×</button>
                 </div>
-                <div class="basemap-category">
-                    <h4>Sokak Haritaları</h4>
-                    <div class="basemap-grid">
-                        <button class="basemap-item" data-basemap="osm">
-                            <div class="basemap-preview osm"></div>
-                            <span>OpenStreetMap</span>
-                        </button>
-                        <button class="basemap-item" data-basemap="cartoVoyager">
-                            <div class="basemap-preview carto-voyager"></div>
-                            <span>CartoDB Voyager</span>
-                        </button>
-                    </div>
-                </div>
-                <div class="basemap-category">
-                    <h4>Topografik</h4>
-                    <div class="basemap-grid">
-                        <button class="basemap-item" data-basemap="openTopo">
-                            <div class="basemap-preview open-topo"></div>
-                            <span>OpenTopoMap</span>
-                        </button>
-                        <button class="basemap-item" data-basemap="stamenTerrain">
-                            <div class="basemap-preview stamen-terrain"></div>
-                            <span>Stamen Arazi</span>
-                        </button>
-                    </div>
-                </div>
-                <div class="basemap-category">
-                    <h4>Minimal</h4>
-                    <div class="basemap-grid">
-                        <button class="basemap-item" data-basemap="cartoPositron">
-                            <div class="basemap-preview carto-light"></div>
-                            <span>CartoDB Açık</span>
-                        </button>
-                        <button class="basemap-item" data-basemap="cartoDark">
-                            <div class="basemap-preview carto-dark"></div>
-                            <span>CartoDB Koyu</span>
-                        </button>
+                <div class="modal-body">
+                    <div class="layers-list">
+                        <div class="layer-group">
+                            <h3 class="layer-group-title">3D Modeller</h3>
+                            <label class="layer-option">
+                                <input type="checkbox" checked data-layer="buildings">
+                                <span>Tarihi Yapılar</span>
+                            </label>
+                            <label class="layer-option">
+                                <input type="checkbox" data-layer="terrain">
+                                <span>Arazi Modeli</span>
+                            </label>
+                        </div>
+                        <div class="layer-group">
+                            <h3 class="layer-group-title">Bilgi Katmanları</h3>
+                            <label class="layer-option">
+                                <input type="checkbox" data-layer="labels">
+                                <span>Etiketler</span>
+                            </label>
+                            <label class="layer-option">
+                                <input type="checkbox" data-layer="borders">
+                                <span>Sınırlar</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -376,48 +476,6 @@
         </div>
 
 
-        <!-- Floating Controls -->
-        <div class="floating-controls">
-            <button class="float-btn" id="btn-home" title="Ana Görünüm">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                    <polyline points="9 22 9 12 15 12 15 22"/>
-                </svg>
-            </button>
-            <button class="float-btn" id="btn-orbit" title="Model Etrafında Dön (Orbit Kilitle/Aç)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="3"/>
-                    <path d="M12 2a10 10 0 0 1 10 10"/>
-                    <path d="M12 22a10 10 0 0 1-10-10"/>
-                    <polyline points="22 2 22 8 16 8"/>
-                    <polyline points="2 22 2 16 8 16"/>
-                </svg>
-            </button>
-            <button class="float-btn" id="btn-zoom-in" title="Yakınlaştır">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"/>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                    <line x1="11" y1="8" x2="11" y2="14"/>
-                    <line x1="8" y1="11" x2="14" y2="11"/>
-                </svg>
-            </button>
-            <button class="float-btn" id="btn-zoom-out" title="Uzaklaştır">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"/>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                    <line x1="8" y1="11" x2="14" y2="11"/>
-                </svg>
-            </button>
-            <button class="float-btn" id="btn-fullscreen" title="Tam Ekran">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="15 3 21 3 21 9"/>
-                    <polyline points="9 21 3 21 3 15"/>
-                    <line x1="21" y1="3" x2="14" y2="10"/>
-                    <line x1="3" y1="21" x2="10" y2="14"/>
-                </svg>
-            </button>
-        </div>
-
         <!-- Status Bar -->
         <footer class="status-bar">
             <div class="status-left">
@@ -433,15 +491,17 @@
                 <span class="status-item" id="fps-counter">60 FPS</span>
             </div>
             <div class="status-right">
-                <span class="status-item">İTÜ - CBS Projeleri 2025</span>
+                <!-- İTÜ yazısı kaldırıldı -->
             </div>
         </footer>
     </div>
 
     <!-- Scripts -->
+    <script src="js/assets.js"></script>
     <script src="js/api.js"></script>
     <script src="js/cesiumViewer.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>
+
 

@@ -13,23 +13,23 @@ const CesiumViewer = (function() {
     let currentTileset = null;
     let contextTileset = null;
 
-    // Molla Hüsrev Camii koordinatları (Fatih, İstanbul)
-    const MOLLA_HUSREV_LOCATION = {
-        longitude: 28.9593,
-        latitude: 41.0135,
-        height: 100
+    // Tarihi Yarımada merkez koordinatları (İstanbul)
+    const TARIHI_YARIMADA_CENTER = {
+        longitude: 28.9562,  // Sultanahmet civarı
+        latitude: 40.9538,
+        height: 7500         // Tüm yarımadayı görmek için yükseklik (2500 -> 3500)
     };
 
-    // Default kamera pozisyonu
+    // Default kamera pozisyonu - Tarihi Yarımada genel görünümü
     const DEFAULT_CAMERA = {
         destination: Cesium.Cartesian3.fromDegrees(
-            MOLLA_HUSREV_LOCATION.longitude,
-            MOLLA_HUSREV_LOCATION.latitude - 0.002,
-            MOLLA_HUSREV_LOCATION.height + 150
+            TARIHI_YARIMADA_CENTER.longitude,
+            TARIHI_YARIMADA_CENTER.latitude,  // Merkezde tut (offset kaldırıldı)
+            TARIHI_YARIMADA_CENTER.height
         ),
         orientation: {
-            heading: Cesium.Math.toRadians(0),
-            pitch: Cesium.Math.toRadians(-35),
+            heading: Cesium.Math.toRadians(0),       // Kuzeye bak
+            pitch: Cesium.Math.toRadians(-50),       // Daha yukarıdan bak (-45 -> -50)
             roll: 0.0
         }
     };
@@ -216,12 +216,24 @@ const CesiumViewer = (function() {
 
         // Backend API URL - otomatik tespit veya manuel
         const apiBaseUrl = options.apiBaseUrl || getApiBaseUrl();
+        console.log('Cesium başlatılıyor... Container:', containerId);
+        console.log('API Base URL:', apiBaseUrl);
 
         try {
             // Önce token'ı backend'den yükle
+            console.log('Token yükleniyor...');
             await initializeToken(apiBaseUrl);
+            console.log('Token başarıyla yüklendi');
+
+            // Container var mı kontrol et
+            const container = document.getElementById(containerId);
+            if (!container) {
+                throw new Error(`Container bulunamadı: ${containerId}`);
+            }
+            console.log('Container bulundu:', container);
 
             // Viewer oluştur
+            console.log('Cesium.Viewer oluşturuluyor...');
             viewer = new Cesium.Viewer(containerId, {
                 // Temel ayarlar
                 animation: false,
@@ -268,6 +280,7 @@ const CesiumViewer = (function() {
             // Düz yüzeyli altlık harita (terrain yok)
             viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
             viewer.scene.globe.depthTestAgainstTerrain = false;
+            viewer.scene.globe.show = true; // Globe'u her zaman göster
             console.log('Düz yüzeyli altlık harita aktif (terrain kapalı)');
 
             // Scene ayarları
@@ -378,7 +391,45 @@ const CesiumViewer = (function() {
     function handleFeatureClick(feature) {
         if (feature && feature.primitive && feature.primitive.isCesium3DTileset) {
             console.log('3D Tile tıklandı:', feature);
-            
+
+            // Tileset'in asset ID'sini bul
+            const tileset = feature.primitive;
+            let clickedAssetId = null;
+
+            // Önce _assetId veya assetId property'sini kontrol et
+            if (tileset._assetId) {
+                clickedAssetId = tileset._assetId.toString();
+            } else if (tileset.assetId) {
+                clickedAssetId = tileset.assetId.toString();
+            }
+
+            // Eğer asset ID bulunamazsa, loadedTilesets'ten ara
+            if (!clickedAssetId) {
+                for (const [assetId, loadedTileset] of Object.entries(loadedTilesets)) {
+                    if (loadedTileset === tileset) {
+                        clickedAssetId = assetId;
+                        break;
+                    }
+                }
+            }
+
+            console.log('Tıklanan modelin Asset ID:', clickedAssetId);
+
+            // Main app'e bildir (window.App.selectAsset kullanarak)
+            if (clickedAssetId && window.AssetsData) {
+                // Asset ID ile eseri backend verilerinden bul
+                const asset = window.AssetsData.assets.find(a =>
+                    a.ionAssetIds.some(layer => layer.id.toString() === clickedAssetId)
+                );
+
+                if (asset && window.App && window.App.selectAsset) {
+                    console.log('Eser bulundu:', asset.name);
+                    window.App.selectAsset(asset.id);
+                } else {
+                    console.log('Bu modele ait eser bulunamadı');
+                }
+            }
+
             // Feature properties'i göster
             if (feature.getProperty) {
                 const properties = {};
@@ -794,22 +845,28 @@ const CesiumViewer = (function() {
      * Bu fonksiyon artık terrain yerine globe görünürlüğünü kontrol ediyor
      */
     function setTerrain(enabled) {
-        settings.globeVisible = enabled;
-        
-        // Globe'u (altlık harita dahil) göster/gizle
-        viewer.scene.globe.show = enabled;
-        
-        // Sky atmosphere'i de kontrol et
-        if (viewer.scene.skyAtmosphere) {
-            viewer.scene.skyAtmosphere.show = enabled;
+        settings.terrainEnabled = enabled;
+
+        // Globe'u her zaman göster (sadece terrain ayarı değiştir)
+        viewer.scene.globe.show = true;
+
+        // Terrain provider değiştir
+        if (enabled) {
+            // Terrain enabled - daha detaylı arazi
+            viewer.terrainProvider = Cesium.createWorldTerrain();
+            viewer.scene.globe.depthTestAgainstTerrain = true;
+        } else {
+            // Terrain disabled - düz yüzey
+            viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
+            viewer.scene.globe.depthTestAgainstTerrain = false;
         }
-        
+
         // Modelin her zaman görünür kalmasını sağla
         if (currentTileset) {
             currentTileset.show = true;
         }
-        
-        console.log('Altlık harita:', enabled ? 'görünür' : 'gizli');
+
+        console.log('Terrain:', enabled ? 'aktif' : 'kapalı', '(Globe her zaman görünür)');
     }
 
     /**
@@ -854,19 +911,14 @@ const CesiumViewer = (function() {
     function getBasemapList() {
         return [
             // Uydu Görüntüsü
-            { id: 'satellite', name: 'Uydu Görüntüsü', icon: '🛰️', category: 'satellite', description: 'Cesium Ion Uydu Görüntüsü' },
+            { id: 'satellite', name: 'Uydu Görüntüsü', category: 'satellite', description: 'Cesium Ion Uydu Görüntüsü' },
             
-            // Sokak Haritaları
-            { id: 'osm', name: 'OpenStreetMap', icon: '🗺️', category: 'street', description: 'Sokak haritası' },
-            { id: 'cartoVoyager', name: 'CartoDB Voyager', icon: '🛣️', category: 'street', description: 'Renkli sokak haritası' },
+            // Sokak Haritası
+            { id: 'osm', name: 'OpenStreetMap', category: 'street', description: 'Sokak haritası' },
             
-            // Topografik (görsel yükselti çizgileri)
-            { id: 'openTopo', name: 'OpenTopoMap', icon: '⛰️', category: 'terrain', description: 'Görsel topografik harita' },
-            { id: 'stamenTerrain', name: 'Stamen Arazi', icon: '🏔️', category: 'terrain', description: 'Gölgeli arazi haritası' },
-            
-            // Minimal
-            { id: 'cartoPositron', name: 'CartoDB Açık', icon: '⬜', category: 'minimal', description: 'Açık minimal tema' },
-            { id: 'cartoDark', name: 'CartoDB Koyu', icon: '⬛', category: 'minimal', description: 'Koyu minimal tema' }
+            // CartoDB
+            { id: 'cartoPositron', name: 'CartoDB Açık', category: 'minimal', description: 'Açık minimal tema' },
+            { id: 'cartoDark', name: 'CartoDB Koyu', category: 'minimal', description: 'Koyu minimal tema' }
         ];
     }
 

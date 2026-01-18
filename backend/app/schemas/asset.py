@@ -61,6 +61,7 @@ class AssetBase(BaseModel):
     model_url: Optional[str] = Field(None, max_length=500)
     model_type: Optional[str] = Field(None, max_length=20)
     model_lod: Optional[str] = Field(None, max_length=10)
+    cesium_ion_asset_id: Optional[int] = None
     is_visitable: bool = True
     data_source: Optional[str] = Field(None, max_length=255)
 
@@ -113,6 +114,7 @@ class AssetResponse(BaseModel):
     model_url: Optional[str] = None
     model_type: Optional[str] = None
     model_lod: Optional[str] = None
+    cesium_ion_asset_id: Optional[int] = None
     is_visitable: bool = True
     data_source: Optional[str] = None
     created_at: Optional[datetime] = None

@@ -143,118 +143,170 @@ const API = (function() {
         }
     }
 
+    // ============================================
+    // Assets API (Heritage Assets / Yapılar)
+    // ============================================
+
     /**
-     * Yapı listesini getir
+     * Tüm yapıları getir
+     * @param {object} params - { asset_type, historical_period, neighborhood, search, limit, offset }
      */
-    async function getBuildings(params = {}) {
-        return get('/buildings', params);
+    async function getAssets(params = {}) {
+        return get('/assets', params);
     }
 
     /**
-     * Tek bir yapıyı getir
+     * Tek bir yapıyı getir (ID ile)
      */
-    async function getBuilding(id) {
-        return get(`/buildings/${id}`);
+    async function getAsset(id) {
+        return get(`/assets/${id}`);
     }
 
     /**
-     * Yapı metadatasını getir
+     * Yapıları GeoJSON formatında getir
+     * @param {object} params - { asset_type, historical_period, bbox }
      */
-    async function getBuildingMetadata(id) {
-        return get(`/buildings/${id}/metadata`);
+    async function getAssetsGeoJSON(params = {}) {
+        return get('/assets/geojson', params);
     }
 
     /**
-     * 3D Tiles tileset URL'ini getir
+     * Yapı identifier ile getir (örn: HA-0001)
      */
-    async function getTilesetUrl(buildingId) {
-        return get(`/buildings/${buildingId}/tileset`);
+    async function getAssetByIdentifier(identifier) {
+        return get(`/assets/identifier/${identifier}`);
     }
 
     /**
-     * Point Cloud URL'ini getir
+     * Yapının aktörlerini getir (mimarlar, patronlar)
      */
-    async function getPointCloudUrl(buildingId) {
-        return get(`/buildings/${buildingId}/pointcloud`);
+    async function getAssetActors(assetId) {
+        return get(`/assets/${assetId}/actors`);
     }
 
     /**
-     * Katman listesini getir
+     * Yapının medyalarını getir
      */
-    async function getLayers() {
-        return get('/layers');
+    async function getAssetMedia(assetId) {
+        return get(`/assets/${assetId}/media`);
     }
 
     /**
-     * Katman bilgisini getir
+     * Yapı istatistiklerini getir
      */
-    async function getLayer(id) {
-        return get(`/layers/${id}`);
+    async function getAssetsStats() {
+        return get('/assets/stats/summary');
+    }
+
+    // ============================================
+    // Segments API (3D Model Parçaları)
+    // ============================================
+
+    /**
+     * Tüm segmentleri getir
+     * @param {object} params - { asset_id, segment_type, condition, limit, offset }
+     */
+    async function getSegments(params = {}) {
+        return get('/segments', params);
     }
 
     /**
-     * Mekansal sorgu yap
+     * Tek bir segmenti getir
      */
-    async function spatialQuery(params) {
-        return post('/query/spatial', params);
+    async function getSegment(segmentId) {
+        return get(`/segments/${segmentId}`);
     }
 
     /**
-     * Öznitelik sorgusu yap
+     * Yapının segmentlerini getir
      */
-    async function attributeQuery(params) {
-        return post('/query/attribute', params);
+    async function getAssetSegments(assetId, params = {}) {
+        return get(`/segments/by-asset/${assetId}`, params);
     }
 
     /**
-     * Ölçüm sonucunu kaydet
+     * Segment tiplerini getir
      */
-    async function saveMeasurement(data) {
-        return post('/measurements', data);
+    async function getSegmentTypes() {
+        return get('/segments/types');
     }
 
     /**
-     * Ölçümleri getir
+     * Segment istatistiklerini getir
      */
-    async function getMeasurements(buildingId) {
-        return get(`/buildings/${buildingId}/measurements`);
+    async function getSegmentsStats() {
+        return get('/segments/stats/summary');
     }
 
+    // ============================================
+    // Notes API (Kullanıcı Notları)
+    // ============================================
+
     /**
-     * Not (Açıklama) ekle
-     * @param {object} data - { yapi_id, baslik, aciklama, x, y, z, olusturan }
+     * Not ekle
+     * @param {object} data - { asset_id, user_identifier, note_text }
      */
     async function addNote(data) {
-        return post('/aciklamalar', data);
+        return post('/notes', data);
     }
 
     /**
      * Yapıya ait notları getir
      */
-    async function getNotes(yapiId) {
-        return get(`/yapilar/${yapiId}/aciklamalar`);
+    async function getNotes(assetId) {
+        return get(`/notes/by-asset/${assetId}`);
     }
 
     /**
-     * Tüm yapıları getir (Türkçe endpoint)
+     * Tüm notları getir
+     * @param {object} params - { asset_id, user_identifier, limit, offset }
      */
-    async function getYapilar(params = {}) {
-        return get('/yapilar', params);
+    async function getAllNotes(params = {}) {
+        return get('/notes', params);
     }
 
     /**
-     * Tek yapıyı getir
+     * Tek bir notu getir
      */
-    async function getYapi(yapiId) {
-        return get(`/yapilar/${yapiId}`);
+    async function getNote(noteId) {
+        return get(`/notes/${noteId}`);
     }
 
     /**
-     * Coğrafi arama
+     * Notu sil
      */
-    async function geocode(query) {
-        return get('/geocode', { q: query });
+    async function deleteNote(noteId) {
+        return del(`/notes/${noteId}`);
     }
+
+    // ============================================
+    // Search & Metadata API
+    // ============================================
+
+    /**
+     * Arama yap
+     */
+    async function search(query) {
+        return get('/search', { q: query });
+    }
+
+    /**
+     * Dataset metadata getir (ISO 19115)
+     */
+    async function getMetadata() {
+        return get('/metadata');
+    }
+
+    // ============================================
+    // Legacy/Uyumluluk fonksiyonları
+    // (Eski kod için geriye dönük uyumluluk)
+    // ============================================
+
+    // Eski isimler - yeni fonksiyonlara yönlendir
+    const getBuildings = getAssets;
+    const getBuilding = getAsset;
+    const getYapilar = getAssets;
+    const getYapi = getAsset;
 
     // Public API
     return {
@@ -272,38 +324,43 @@ const API = (function() {
         put,
         delete: del,
         
-        // Buildings (English)
+        // Assets (Heritage Assets / Yapılar)
+        getAssets,
+        getAsset,
+        getAssetsGeoJSON,
+        getAssetByIdentifier,
+        getAssetActors,
+        getAssetMedia,
+        getAssetsStats,
+        
+        // Legacy/Uyumluluk (eski kod için)
         getBuildings,
         getBuilding,
-        getBuildingMetadata,
-        getTilesetUrl,
-        getPointCloudUrl,
-        
-        // Yapılar (Turkish)
         getYapilar,
         getYapi,
         
-        // Layers
-        getLayers,
-        getLayer,
+        // Segments (3D Model Parçaları)
+        getSegments,
+        getSegment,
+        getAssetSegments,
+        getSegmentTypes,
+        getSegmentsStats,
         
-        // Queries
-        spatialQuery,
-        attributeQuery,
-        
-        // Measurements
-        saveMeasurement,
-        getMeasurements,
-        
-        // Notes (Açıklamalar)
+        // Notes (Kullanıcı Notları)
         addNote,
         getNotes,
+        getAllNotes,
+        getNote,
+        deleteNote,
         
-        // Geocoding
-        geocode
+        // Search & Metadata
+        search,
+        getMetadata
     };
 })();
 
 // Global erişim için
 window.API = API;
+
+
 

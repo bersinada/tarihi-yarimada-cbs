@@ -12,16 +12,36 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 from typing import Generator
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
+# Önce proje kök dizinindeki .env'i dene, sonra backend klasöründekini
+env_path = Path(__file__).parent.parent.parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
+else:
+    # Backend klasöründeki .env'i dene
+    env_path = Path(__file__).parent.parent.parent / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+    else:
+        load_dotenv()  # Mevcut dizinde .env ara
 
 # Database URL from environment
-DATABASE_URL = os.getenv("DATABASE_URL")
+# Önce local_database_url (küçük harf), sonra LOCAL_DATABASE_URL, sonra DATABASE_URL
+DATABASE_URL = (
+    os.getenv("local_database_url") or 
+    os.getenv("LOCAL_DATABASE_URL") or 
+    os.getenv("DATABASE_URL") or
+    os.getenv("AZURE_DATABASE_URL")
+)
 
 if not DATABASE_URL:
-    raise ValueError("DATABASE_URL environment variable is not set")
+    raise ValueError(
+        "Veritabanı URL'i bulunamadı! "
+        ".env dosyasında 'local_database_url', 'LOCAL_DATABASE_URL' veya 'DATABASE_URL' tanımlı olmalı."
+    )
 
 # SQLAlchemy Engine
 engine = create_engine(

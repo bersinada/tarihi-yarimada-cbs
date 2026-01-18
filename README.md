@@ -1,20 +1,22 @@
 # 🏛️ Tarihi Yarımada CBS Platformu
 
-İstanbul Tarihi Yarımada'daki kültürel miras yapılarının 3D modellerini ve nokta bulutu verilerini web ortamında sunan CBS platformu.
+İstanbul Tarihi Yarımada'daki kültürel miras yapılarının 3D modellerini ve nokta bulutu verilerini web ortamında sunan interaktif CBS platformu.
 
 🌐 **Canlı Site:** [tarihiyarimadacbs.app](https://tarihiyarimadacbs.app)
 
 ## 📋 Proje Hakkında
 
-Bu proje, İTÜ CBS Projeleri dersi kapsamında geliştirilmiştir. Tarihi Yarımada'daki kültürel miras yapılarının (Molla Hüsrev Camii) 3D modellerini ve point cloud verilerini interaktif bir web arayüzünde sunmayı amaçlamaktadır.
+Bu proje, İTÜ CBS Projeleri dersi kapsamında geliştirilmiştir. Tarihi Yarımada'daki kültürel miras yapılarının (Molla Hüsrev Camii, Sultanahmet Camii) 3D modellerini ve point cloud verilerini interaktif bir web arayüzünde sunmayı amaçlamaktadır.
 
 ### 🎯 Özellikler
 
-- **Cesium JS** ile 3D Tiles görselleştirme (dış cephe ve iç mekan)
-- **Katman Yönetimi** - Dış cephe, iç mekan ve şadırvan katmanlarını kontrol edin
-- **Anotasyon Sistemi** - 3D modeller üzerinde not ekleme
-- **INSPIRE/TUCBS Uyumlu** - Standartlara uygun veri yapısı
-- **PostGIS Entegrasyonu** - Mekansal veritabanı desteği
+- **3D Görselleştirme** - Cesium JS ile 3D Tiles ve mesh modelleri (dış cephe, iç mekan, detaylar)
+- **Katman Yönetimi** - Yapı katmanlarını (dış cephe, iç mekan, şadırvan, vb.) ayrı ayrı kontrol
+- **İnteraktif Kamera Modları** - Orbit, First Person, Walking modları ile yapıyı keşfedin
+- **Anotasyon Sistemi** - 3D modeller üzerinde not ekleme ve paylaşma
+- **INSPIRE/TUCBS Uyumlu** - Avrupa ve Türkiye standartlarına uygun veri yapısı
+- **PostGIS Entegrasyonu** - PostgreSQL + PostGIS ile mekansal veritabanı desteği
+- **Modern UI/UX** - Responsive tasarım, dark tema, premium görünüm
 
 ## 🛠️ Teknolojiler
 
@@ -77,29 +79,58 @@ Detaylı kurulum için `TEST_REHBERI.md` dosyasına bakın.
 
 ```
 tarihi-yarimada-cbs/
-├── index.html              # Ana HTML sayfası
-├── css/                    # Stil dosyaları
-├── js/                     # JavaScript modülleri
-│   ├── main.js            # Ana uygulama
-│   ├── api.js             # API modülü
-│   └── cesiumViewer.js    # Cesium viewer
-├── backend/                # FastAPI backend
-│   ├── main.py            # API endpoints
-│   ├── database.py        # Veritabanı modelleri
-│   └── migrations/        # Veritabanı migration'ları
-├── requirements.txt        # Python bağımlılıkları
-└── start-local-test.bat   # Lokal test scripti
+├── index.html                  # Ana HTML sayfası
+├── css/
+│   └── styles.css             # Modern UI stilleri (dark tema, animasyonlar)
+├── js/
+│   ├── main.js                # Ana uygulama mantığı
+│   ├── api.js                 # Backend API modülü
+│   ├── assets.js              # Varlık yönetimi
+│   └── cesiumViewer.js        # Cesium 3D viewer & kamera kontrolleri
+├── assets/
+│   ├── logo.png               # Platform logosu
+│   └── silhouette.png         # İstanbul silüeti
+├── backend/
+│   ├── app/
+│   │   ├── api/               # API endpoints (Clean Architecture)
+│   │   │   ├── assets.py
+│   │   │   ├── categories.py
+│   │   │   └── layers.py
+│   │   ├── db/                # Veritabanı katmanı
+│   │   │   ├── database.py    # PostgreSQL bağlantısı
+│   │   │   └── models.py      # SQLAlchemy modelleri
+│   │   └── schemas/           # Pydantic şemaları
+│   ├── init_db.py             # Veritabanı başlatma
+│   ├── scripts/
+│   │   └── seed_data.py       # Örnek veri ekleme
+│   └── main.py                # FastAPI uygulaması
+├── requirements.txt           # Python bağımlılıkları
+├── start-local-test.bat       # Backend başlatma (Windows)
+└── start-frontend.bat         # Frontend başlatma (Windows)
 ```
 
 ## 🔗 API Endpoints
 
-- `GET /api/v1/health` - Sağlık kontrolü
-- `GET /api/v1/yapilar` - Yapı listesi
-- `GET /api/v1/yapilar/{id}` - Yapı detayı
-- `GET /api/v1/katmanlar` - Katman listesi
+### Sağlık & Yapılandırma
+- `GET /api/v1/health` - Sistem sağlık kontrolü
 - `GET /api/cesium-config` - Cesium token yapılandırması
 
-API dokümantasyonu: http://localhost:8000/docs
+### Varlıklar (Assets)
+- `GET /api/v1/assets` - Tüm varlıkları listele (filtreler: category, layer)
+- `GET /api/v1/assets/{id}` - Varlık detayı
+- `POST /api/v1/assets` - Yeni varlık ekle
+- `PUT /api/v1/assets/{id}` - Varlık güncelle
+- `DELETE /api/v1/assets/{id}` - Varlık sil
+
+### Kategoriler
+- `GET /api/v1/categories` - Kategori listesi
+
+### Katmanlar
+- `GET /api/v1/layers` - Katman listesi
+
+### İnteraktif API Dokümantasyonu
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
 
 ## 📋 Standartlar
 

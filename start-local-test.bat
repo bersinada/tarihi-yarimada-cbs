@@ -15,8 +15,10 @@ if not exist .env (
     echo [UYARI] .env dosyasi bulunamadi!
     echo.
     echo Lutfen .env dosyasi olusturun:
+    echo local_database_url=postgresql://username:password@localhost:5432/tarihi_yarimada_cbs
     echo DATABASE_URL=postgresql://username:password@localhost:5432/tarihi_yarimada_cbs
     echo CESIUM_TOKEN=your_cesium_ion_token_here
+    echo ALLOWED_ORIGINS=*
     echo.
     pause
     exit /b 1
@@ -47,7 +49,7 @@ call venv\Scripts\activate.bat
 
 REM Bağımlılıkları yükle
 echo [BILGI] Bagimliliklari yukleniyor...
-pip install -r requirements.txt
+pip install -r backend\requirements.txt
 if errorlevel 1 (
     echo [HATA] Bagimliliklar yuklenemedi!
     pause
@@ -71,7 +73,7 @@ echo [CTRL+C] ile durdurmak icin
 echo.
 
 REM Backend'i başlat (proje kök dizininden)
-uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 
 pause
 
