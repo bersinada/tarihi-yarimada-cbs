@@ -95,7 +95,11 @@ const App = (function() {
         elements.assetDescription = document.getElementById('asset-description');
         elements.assetLayers = document.getElementById('asset-layers');
         elements.locationText = document.getElementById('location-text');
-        
+
+        // Photo gallery
+        elements.photoGallery = document.getElementById('photo-gallery');
+        elements.galleryPlaceholder = document.getElementById('gallery-placeholder');
+
         // Notes
         elements.noteTitle = document.getElementById('note-title');
         elements.noteContent = document.getElementById('note-content');
@@ -105,6 +109,12 @@ const App = (function() {
         elements.btnRefreshNotes = document.getElementById('btn-refresh-notes');
         elements.notesCountNumber = document.getElementById('notes-count-number');
         elements.notesItems = document.getElementById('notes-items');
+
+        // Asset View Controls - Harita üzerinde floating overlay
+        elements.assetViewControls = document.getElementById('asset-view-controls');
+        elements.btnAssetOrbit = document.getElementById('btn-asset-orbit');
+        elements.btnAssetZoom = document.getElementById('btn-asset-zoom');
+        elements.btnAssetClose = document.getElementById('btn-asset-close');
     }
 
     /**
@@ -232,13 +242,23 @@ const App = (function() {
         if (elements.btnRefreshNotes) {
             elements.btnRefreshNotes.addEventListener('click', loadNotes);
         }
-        
+
+        // Asset View Controls - Harita üzerinde floating overlay butonları
+        if (elements.btnAssetOrbit) {
+            elements.btnAssetOrbit.addEventListener('click', handleAssetOrbit);
+        }
+        if (elements.btnAssetZoom) {
+            elements.btnAssetZoom.addEventListener('click', handleAssetZoom);
+        }
+        if (elements.btnAssetClose) {
+            elements.btnAssetClose.addEventListener('click', handleAssetClose);
+        }
+
         // Close panel when pressing Escape
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 closeAssetPanel();
                 closeAboutPanel();
-                closeBasemapPanel();
                 closeAllModals();
             }
         });
@@ -304,7 +324,7 @@ const App = (function() {
     }
 
     /**
-     * Dropdown menüsünü backend'den yüklenen eserlerle doldur
+     * Dropdown menüsünü backend'den yüklenen eserlerle doldur (yapı tiplerine göre grupla)
      */
     function populateAssetsDropdown() {
         const dropdownContent = document.querySelector('.dropdown-content');
@@ -316,39 +336,41 @@ const App = (function() {
         // Mevcut içeriği temizle
         dropdownContent.innerHTML = '';
 
-        // Eserleri periyoda göre grupla
-        const periods = {};
+        // Eserleri yapı tipine göre grupla
+        const typeGroups = {};
         AssetsData.assets.forEach(asset => {
-            if (!periods[asset.period]) {
-                periods[asset.period] = [];
+            const type = asset.buildingType || 'diger';
+            if (!typeGroups[type]) {
+                typeGroups[type] = [];
             }
-            periods[asset.period].push(asset);
+            typeGroups[type].push(asset);
         });
 
-        // Her periyod için section oluştur
-        const periodOrder = ['Bizans', 'Osmanlı', 'Cumhuriyet', 'Diğer'];
-        periodOrder.forEach(periodName => {
-            if (!periods[periodName] || periods[periodName].length === 0) return;
+        // Yapı tiplerini sıralı olarak getir
+        const orderedTypes = AssetsData.getBuildingTypes();
 
+        // Her yapı tipi için section oluştur
+        orderedTypes.forEach(typeKey => {
+            if (!typeGroups[typeKey] || typeGroups[typeKey].length === 0) return;
+
+            const typeInfo = AssetsData.getBuildingTypeInfo(typeKey);
             const section = document.createElement('div');
             section.className = 'dropdown-section';
 
             const title = document.createElement('h4');
             title.className = 'dropdown-section-title';
-            title.innerHTML = `
-                <svg class="period-icon" viewBox="0 0 16 16" width="12" height="12">
-                    <rect x="3" y="3" width="10" height="10" fill="currentColor"/>
-                </svg>
-                ${periodName} Dönemi
-            `;
+            title.textContent = typeInfo.name;
             section.appendChild(title);
 
             // Eserleri ekle
-            periods[periodName].forEach(asset => {
+            typeGroups[typeKey].forEach(asset => {
                 const button = document.createElement('button');
                 button.className = 'dropdown-item';
                 button.dataset.asset = asset.id;
-                button.innerHTML = `<span class="asset-name">${asset.name}</span>`;
+                button.innerHTML = `
+                    <span class="asset-name">${asset.name}</span>
+                    <span class="asset-period-tag">${asset.period}</span>
+                `;
 
                 // Event listener ekle
                 button.addEventListener('click', () => {
@@ -361,7 +383,7 @@ const App = (function() {
             dropdownContent.appendChild(section);
         });
 
-        console.log('Dropdown menüsü dinamik olarak oluşturuldu:', Object.keys(periods));
+        console.log('Dropdown menüsü yapı tiplerine göre oluşturuldu:', orderedTypes);
     }
 
     /**
@@ -412,7 +434,8 @@ const App = (function() {
         // Kamerayı asset'e zoom at (çapraz yukarıdan)
         zoomToAsset(asset);
 
-        // Orbit modu artık otomatik başlamıyor - kullanıcı manuel olarak aktifleştirmeli
+        // Asset view controls overlay'ini göster
+        showAssetViewControls();
 
         // Notları yükle
         loadNotes(assetId);
@@ -425,20 +448,94 @@ const App = (function() {
         // Başlık ve bilgiler
         elements.assetName.textContent = asset.name;
         elements.assetPeriod.textContent = asset.period;
-        elements.assetYear.textContent = asset.year;
+        // Yapım yılı - construction_period veya formatlanmış yıl
+        elements.assetYear.textContent = formatYearDisplay(asset.year);
         elements.assetPeriodInfo.textContent = asset.period + ' Dönemi';
         elements.assetFounder.textContent = asset.founder;
         elements.assetLocation.textContent = asset.location;
         elements.assetDescription.textContent = asset.description;
-        
+
         // 3D model katmanlarını listele
         renderAssetLayers(asset);
-        
+
+        // Fotoğrafları yükle
+        loadAssetPhotos(asset.id);
+
         // Panel'i aç
         state.isAssetPanelOpen = true;
         elements.assetPanel.classList.add('open');
-        
+
         updateLoadingStatus('Bilgiler yüklendi');
+    }
+
+    /**
+     * Asset fotoğraflarını yükle ve göster
+     */
+    async function loadAssetPhotos(assetId) {
+        if (!elements.photoGallery) return;
+
+        // Placeholder'ı göster
+        if (elements.galleryPlaceholder) {
+            elements.galleryPlaceholder.style.display = 'flex';
+            elements.galleryPlaceholder.querySelector('p').textContent = 'Fotoğraflar yükleniyor...';
+        }
+
+        // Mevcut fotoğrafları temizle (placeholder hariç)
+        const existingPhotos = elements.photoGallery.querySelectorAll('.gallery-item');
+        existingPhotos.forEach(item => item.remove());
+
+        try {
+            const media = await AssetsData.loadAssetMedia(assetId);
+            console.log('Media loaded:', media);
+
+            if (media && media.length > 0) {
+                // Placeholder'ı gizle
+                if (elements.galleryPlaceholder) {
+                    elements.galleryPlaceholder.style.display = 'none';
+                }
+
+                // Fotoğrafları ekle
+                const apiBaseUrl = AssetsData.getApiBaseUrl();
+                console.log('API Base URL:', apiBaseUrl);
+                media.forEach((item, index) => {
+                    const galleryItem = document.createElement('div');
+                    galleryItem.className = 'gallery-item' + (item.is_primary ? ' primary' : '');
+
+                    const img = document.createElement('img');
+                    // Relative URL'leri backend URL'si ile birleştir
+                    const imgUrl = item.url.startsWith('/') ? `${apiBaseUrl}${item.url}` : item.url;
+                    console.log('Image URL:', imgUrl);
+                    img.src = imgUrl;
+                    img.alt = item.caption || 'Fotoğraf';
+                    img.loading = 'lazy';
+                    img.onerror = () => {
+                        galleryItem.style.display = 'none';
+                    };
+
+                    if (item.caption) {
+                        const caption = document.createElement('span');
+                        caption.className = 'gallery-caption';
+                        caption.textContent = item.caption;
+                        galleryItem.appendChild(caption);
+                    }
+
+                    galleryItem.appendChild(img);
+                    elements.photoGallery.appendChild(galleryItem);
+                });
+            } else {
+                // Fotoğraf yok
+                if (elements.galleryPlaceholder) {
+                    elements.galleryPlaceholder.style.display = 'flex';
+                    elements.galleryPlaceholder.querySelector('p').textContent = 'Fotoğraf bulunamadı';
+                }
+            }
+        } catch (error) {
+            console.error('Fotoğraflar yüklenirken hata:', error);
+            if (elements.galleryPlaceholder) {
+                elements.galleryPlaceholder.style.display = 'flex';
+                elements.galleryPlaceholder.querySelector('p').textContent = 'Fotoğraflar yüklenemedi';
+            }
+        }
     }
 
     /**
@@ -447,6 +544,30 @@ const App = (function() {
     function closeAssetPanel() {
         state.isAssetPanelOpen = false;
         elements.assetPanel.classList.remove('open');
+
+        // Orbit modunu kapat
+        if (state.orbitLocked) {
+            state.orbitLocked = false;
+            CesiumViewer.unlockOrbit();
+            if (elements.btnOrbit) {
+                elements.btnOrbit.classList.remove('active');
+            }
+            if (elements.btnAssetOrbit) {
+                elements.btnAssetOrbit.classList.remove('active');
+            }
+        }
+
+        // Asset view controls overlay'ini gizle
+        hideAssetViewControls();
+
+        // Seçili asset'i temizle ve home'a dön
+        if (state.currentAssetId) {
+            state.currentAssetId = null;
+            if (elements.locationText) {
+                elements.locationText.textContent = 'Tarihi Yarımada - İstanbul';
+            }
+            CesiumViewer.flyToHome();
+        }
     }
 
     /**
@@ -504,22 +625,79 @@ const App = (function() {
     }
 
     /**
+     * Yapı tipine göre kamera ayarlarını getir
+     */
+    function getCameraSettingsForAsset(asset) {
+        // Yapı tipine göre dinamik kamera ayarları
+        const cameraPresets = {
+            anit: {          // Sütunlar, dikilitaşlar - küçük objeler
+                height: 45,
+                lonOffset: -0.0001,
+                latOffset: 0.0007,
+                pitch: -25
+            },
+            cesme: {         // Çeşmeler - küçük objeler
+                height: 35,
+                lonOffset: +0.0000,
+                latOffset: 0.0005,
+                pitch: -30
+            },
+            turbe: {         // Türbeler - orta boy
+                height: 70,
+                lonOffset: -0.0001,
+                latOffset: 0.0012,
+                pitch: -25
+            },
+            cami: {          // Camiler - büyük yapılar
+                height: 120,
+                lonOffset: -0.0004,
+                latOffset: 0.0025,
+                pitch: -20
+            },
+            kilise: {        // Kiliseler/Müzeler - büyük yapılar
+                height: 130,
+                lonOffset: -0.0004,
+                latOffset: 0.0028,
+                pitch: -20
+            },
+            saray: {         // Saraylar - çok büyük yapılar
+                height: 180,
+                lonOffset: -0.0006,
+                latOffset: 0.0035,
+                pitch: -18
+            },
+            diger: {         // Diğer - varsayılan
+                height: 80,
+                lonOffset: -0.0003,
+                latOffset: 0.0018,
+                pitch: -22
+            }
+        };
+
+        const buildingType = asset.buildingType || 'diger';
+        return cameraPresets[buildingType] || cameraPresets.diger;
+    }
+
+    /**
      * Kamerayı asset'e zoom at
      */
     function zoomToAsset(asset) {
         if (!asset.position) return;
 
+        // Yapı tipine göre dinamik kamera ayarları al
+        const cam = getCameraSettingsForAsset(asset);
+
         const destination = Cesium.Cartesian3.fromDegrees(
-            asset.position.lon + 0.0007,        // Longitude offset
-            asset.position.lat - 0.0045,        // Latitude offset
-            250                                // Yükseklik (metre)
+            asset.position.lon + cam.lonOffset,
+            asset.position.lat + cam.latOffset,
+            cam.height
         );
 
         CesiumViewer.getViewer().camera.flyTo({
             destination: destination,
             orientation: {
-                heading: Cesium.Math.toRadians(0),   // Kamera yönü (0=kuzey, 90=doğu, 180=güney, 270=batı)
-                pitch: Cesium.Math.toRadians(-25),     // Yukarı/aşağı açı
+                heading: Cesium.Math.toRadians(180),
+                pitch: Cesium.Math.toRadians(cam.pitch),
                 roll: 0.0
             },
             duration: 1.5
@@ -547,8 +725,32 @@ const App = (function() {
         // Asset panel'i kapat
         closeAssetPanel();
 
-        // Tüm yarımadayı göster (Cesium kamera hareketi)
-        showHomeView();
+        // Seçili asset'i temizle
+        state.currentAssetId = null;
+
+        // Location badge'i güncelle
+        if (elements.locationText) {
+            elements.locationText.textContent = 'Tarihi Yarımada - İstanbul';
+        }
+
+        // Panel açıkken haritayı sağa kaydır (panel 500px)
+        // Böylece yarımada tam görünür
+        const viewer = CesiumViewer.getViewer();
+        if (viewer) {
+            viewer.camera.flyTo({
+                destination: Cesium.Cartesian3.fromDegrees(
+                    28.9562 - 0.025,  // Sağa (doğuya) kaydır
+                    40.9538,
+                    7500
+                ),
+                orientation: {
+                    heading: Cesium.Math.toRadians(0),
+                    pitch: Cesium.Math.toRadians(-50),
+                    roll: 0.0
+                },
+                duration: 2.0
+            });
+        }
     }
 
     /**
@@ -557,6 +759,9 @@ const App = (function() {
     function closeAboutPanel() {
         state.isAboutPanelOpen = false;
         elements.aboutPanel.classList.remove('open');
+
+        // Haritayı merkeze geri getir
+        CesiumViewer.flyToHome();
     }
 
     /**
@@ -688,16 +893,126 @@ const App = (function() {
      * Orbit modunu aç/kapat
      */
     function handleOrbitToggle() {
+        // Seçili yapı yoksa uyarı ver
+        if (!state.currentAssetId) {
+            showToast('Önce bir yapı seçin', 'error');
+            return;
+        }
+
+        toggleOrbitMode();
+    }
+
+    /**
+     * Orbit modunu aç/kapat (ortak fonksiyon)
+     */
+    function toggleOrbitMode() {
         state.orbitLocked = !state.orbitLocked;
-        
+
         if (state.orbitLocked) {
-            CesiumViewer.lockOrbitToModel();
-            elements.btnOrbit.classList.add('active');
-            elements.btnOrbit.title = 'Orbit Kilidini Kaldır (Serbest Hareket)';
+            // Seçili yapı bilgilerini al
+            const asset = AssetsData.getAsset(state.currentAssetId);
+            if (asset) {
+                // Yapı tipine göre varsayılan orbit radius
+                const radiusMap = {
+                    anit: 25,      // Sütunlar, dikilitaşlar - küçük
+                    cesme: 20,     // Çeşmeler - küçük
+                    turbe: 35,     // Türbeler - orta
+                    cami: 80,      // Camiler - büyük
+                    kilise: 90,    // Kiliseler/Müzeler - büyük
+                    saray: 150,    // Saraylar - çok büyük
+                    diger: 50      // Diğer - varsayılan
+                };
+                const defaultRadius = radiusMap[asset.buildingType] || radiusMap.diger;
+
+                // Fallback koordinatları hazırla
+                const fallbackPosition = {
+                    lon: asset.position?.lon || 28.9750,
+                    lat: asset.position?.lat || 41.0100,
+                    height: 0,
+                    radius: defaultRadius
+                };
+
+                // Tileset varsa kullan, yoksa fallback koordinatlar
+                let ionAssetId = null;
+                if (asset.ionAssetIds && asset.ionAssetIds.length > 0) {
+                    ionAssetId = asset.ionAssetIds[0].id;
+                }
+
+                CesiumViewer.orbitAroundTileset(ionAssetId, fallbackPosition);
+            }
+            // Butonları güncelle
+            if (elements.btnOrbit) {
+                elements.btnOrbit.classList.add('active');
+            }
+            if (elements.btnAssetOrbit) {
+                elements.btnAssetOrbit.classList.add('active');
+            }
         } else {
             CesiumViewer.unlockOrbit();
-            elements.btnOrbit.classList.remove('active');
-            elements.btnOrbit.title = 'Model Etrafında Dön (Orbit Kilitle)';
+            if (elements.btnOrbit) {
+                elements.btnOrbit.classList.remove('active');
+            }
+            if (elements.btnAssetOrbit) {
+                elements.btnAssetOrbit.classList.remove('active');
+            }
+        }
+    }
+
+    /**
+     * Asset View Controls - Orbit butonu (harita üzerinde)
+     */
+    function handleAssetOrbit() {
+        if (!state.currentAssetId) return;
+        toggleOrbitMode();
+    }
+
+    /**
+     * Asset View Controls - Zoom/Odaklan butonu (harita üzerinde)
+     */
+    function handleAssetZoom() {
+        if (!state.currentAssetId) return;
+
+        // Orbit modunu kapat
+        if (state.orbitLocked) {
+            state.orbitLocked = false;
+            CesiumViewer.unlockOrbit();
+            if (elements.btnOrbit) elements.btnOrbit.classList.remove('active');
+            if (elements.btnAssetOrbit) elements.btnAssetOrbit.classList.remove('active');
+        }
+
+        // Yapıya tekrar zoom yap
+        const asset = AssetsData.getAsset(state.currentAssetId);
+        if (asset) {
+            zoomToAsset(asset);
+        }
+    }
+
+    /**
+     * Asset View Controls - Kapat butonu (harita üzerinde)
+     */
+    function handleAssetClose() {
+        closeAssetPanel();
+    }
+
+    /**
+     * Asset View Controls overlay'ini göster
+     */
+    function showAssetViewControls() {
+        if (elements.assetViewControls) {
+            elements.assetViewControls.classList.add('visible');
+        }
+    }
+
+    /**
+     * Asset View Controls overlay'ini gizle
+     */
+    function hideAssetViewControls() {
+        if (elements.assetViewControls) {
+            elements.assetViewControls.classList.remove('visible');
+            // Orbit butonunun active durumunu da sıfırla
+            if (elements.btnAssetOrbit) {
+                elements.btnAssetOrbit.classList.remove('active');
+            }
         }
     }
 
@@ -774,14 +1089,22 @@ const App = (function() {
         
         try {
             const noteText = title + '\n\n' + content;
-            const assetId = state.currentAssetId || 1;
-            
+
+            // Backend numeric ID kullan (string identifier değil)
+            let numericAssetId = 1;
+            if (state.currentAssetId) {
+                const asset = AssetsData.getAsset(state.currentAssetId);
+                if (asset && asset._backend && asset._backend.id) {
+                    numericAssetId = asset._backend.id;
+                }
+            }
+
             const noteData = {
-                asset_id: assetId,
+                asset_id: numericAssetId,
                 user_identifier: author || 'Anonim Kullanıcı',
                 note_text: noteText
             };
-            
+
             await API.addNote(noteData);
             
             showToast('Notunuz başarıyla kaydedildi.', 'success');
@@ -790,8 +1113,8 @@ const App = (function() {
             elements.noteContent.value = '';
             elements.noteAuthor.value = '';
             updateCharCount();
-            
-            await loadNotes(assetId);
+
+            await loadNotes(state.currentAssetId);
             
         } catch (error) {
             console.error('Not kaydedilemedi:', error);
@@ -809,18 +1132,28 @@ const App = (function() {
         if (elements.btnRefreshNotes) {
             elements.btnRefreshNotes.classList.add('spinning');
         }
-        
+
         try {
-            const noteAssetId = assetId || state.currentAssetId || 1;
-            const notes = await API.getNotes(noteAssetId);
+            // Backend numeric ID kullan (string identifier değil)
+            let numericAssetId = 1;
+            const targetId = assetId || state.currentAssetId;
+
+            if (targetId) {
+                const asset = AssetsData.getAsset(targetId);
+                if (asset && asset._backend && asset._backend.id) {
+                    numericAssetId = asset._backend.id;
+                }
+            }
+
+            const notes = await API.getNotes(numericAssetId);
             state.notes = notes || [];
-            
+
             if (elements.notesCountNumber) {
                 elements.notesCountNumber.textContent = state.notes.length;
             }
-            
+
             renderNotes();
-            
+
         } catch (error) {
             console.warn('Notlar yüklenemedi:', error);
             state.notes = [];
@@ -876,6 +1209,27 @@ const App = (function() {
                 </div>
             `;
         }).join('');
+    }
+
+    /**
+     * Yılı formatla (M.Ö. / M.S.) - UI görüntüleme için
+     */
+    function formatYearDisplay(year) {
+        if (!year || year === '-') return '-';
+        // String ise ve özel format içeriyorsa doğrudan döndür
+        if (typeof year === 'string') {
+            // M.Ö., yüzyıl, tahmini gibi özel formatlar
+            if (year.includes('M.Ö.') || year.includes('yüzyıl') || year.includes('tahmini')) {
+                return year;
+            }
+        }
+        // Sayı ise formatla
+        const numYear = parseInt(year);
+        if (isNaN(numYear)) return year;
+        if (numYear < 0) {
+            return `M.Ö. ${Math.abs(numYear)}`;
+        }
+        return numYear.toString();
     }
 
     /**

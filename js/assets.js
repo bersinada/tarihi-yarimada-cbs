@@ -7,6 +7,17 @@ const AssetsData = {
     assets: [],
     loaded: false,
 
+    // Yapı tipi kategorileri
+    buildingTypes: {
+        'cami': { name: 'Camiler', icon: '', order: 1 },
+        'anit': { name: 'Anıtlar ve Sütunlar', icon: '', order: 2 },
+        'kilise': { name: 'Kiliseler ve Müzeler', icon: '', order: 3 },
+        'turbe': { name: 'Türbeler', icon: '', order: 4 },
+        'cesme': { name: 'Çeşmeler', icon: '', order: 5 },
+        'saray': { name: 'Saraylar', icon: '', order: 6 },
+        'diger': { name: 'Diğer Yapılar', icon: '', order: 7 }
+    },
+
     /**
      * Backend'den tüm eserleri yükle
      */
@@ -56,7 +67,8 @@ const AssetsData = {
             id: backendAsset.identifier,
             name: backendAsset.name_tr,
             period: periodMap[backendAsset.historical_period] || 'Diğer',
-            year: backendAsset.construction_year,
+            buildingType: this.determineBuildingType(backendAsset),
+            year: backendAsset.construction_period || this.formatYear(backendAsset.construction_year),
             founder: this.getFounder(backendAsset),
             location: backendAsset.neighborhood || 'İstanbul',
             description: backendAsset.description_tr || '',
@@ -84,6 +96,49 @@ const AssetsData = {
     },
 
     /**
+     * Yapı tipini belirle (backend'den gelen asset_type veya isimden çıkar)
+     */
+    determineBuildingType(asset) {
+        // Backend'den gelen asset_type varsa kullan
+        if (asset.asset_type) {
+            const typeMap = {
+                'cami': 'cami',
+                'mosque': 'cami',
+                'kilise': 'kilise',
+                'church': 'kilise',
+                'müze': 'kilise',
+                'museum': 'kilise',
+                'saray': 'saray',
+                'palace': 'saray',
+                'türbe': 'turbe',
+                'tomb': 'turbe',
+                'çeşme': 'cesme',
+                'fountain': 'cesme',
+                'anıt': 'anit',
+                'monument': 'anit',
+                'sütun': 'anit',
+                'column': 'anit',
+                'obelisk': 'anit'
+            };
+            const normalizedType = asset.asset_type.toLowerCase();
+            if (typeMap[normalizedType]) {
+                return typeMap[normalizedType];
+            }
+        }
+
+        // İsimden tahmin et
+        const name = (asset.name_tr || '').toLowerCase();
+        if (name.includes('cami') || name.includes('mescid')) return 'cami';
+        if (name.includes('kilise') || name.includes('irini') || name.includes('ayasofya')) return 'kilise';
+        if (name.includes('saray')) return 'saray';
+        if (name.includes('türbe')) return 'turbe';
+        if (name.includes('çeşme')) return 'cesme';
+        if (name.includes('dikilitaş') || name.includes('sütun') || name.includes('anıt')) return 'anit';
+
+        return 'diger';
+    },
+
+    /**
      * Kurucuyu belirle (gelecekte actors API'den çekilecek)
      */
     getFounder(asset) {
@@ -92,6 +147,17 @@ const AssetsData = {
             return 'I. Justinianus';
         }
         return 'Osmanlı';
+    },
+
+    /**
+     * Yılı formatla (M.Ö. / M.S.)
+     */
+    formatYear(year) {
+        if (!year) return '-';
+        if (year < 0) {
+            return `M.Ö. ${Math.abs(year)}`;
+        }
+        return year.toString();
     },
 
     /**
@@ -122,10 +188,34 @@ const AssetsData = {
     },
 
     /**
+     * Yapı tipine göre eserleri filtrele
+     */
+    getAssetsByBuildingType(buildingType) {
+        return this.assets.filter(a => a.buildingType === buildingType);
+    },
+
+    /**
      * Tüm periyodları getir
      */
     getPeriods() {
         return [...new Set(this.assets.map(a => a.period))];
+    },
+
+    /**
+     * Tüm yapı tiplerini getir (sıralı)
+     */
+    getBuildingTypes() {
+        const usedTypes = [...new Set(this.assets.map(a => a.buildingType))];
+        return usedTypes
+            .filter(type => this.buildingTypes[type])
+            .sort((a, b) => this.buildingTypes[a].order - this.buildingTypes[b].order);
+    },
+
+    /**
+     * Yapı tipi bilgisini getir
+     */
+    getBuildingTypeInfo(typeKey) {
+        return this.buildingTypes[typeKey] || this.buildingTypes['diger'];
     },
 
     /**
@@ -134,6 +224,36 @@ const AssetsData = {
     getIonAssetIds(assetId) {
         const asset = this.getAsset(assetId);
         return asset ? asset.ionAssetIds : [];
+    },
+
+    /**
+     * Eserin fotoğraflarını backend'den yükle
+     */
+    async loadAssetMedia(assetId) {
+        try {
+            const asset = this.getAsset(assetId);
+            if (!asset || !asset._backend) {
+                console.warn('Asset bulunamadı:', assetId);
+                return [];
+            }
+
+            const backendId = asset._backend.id;
+            const apiBaseUrl = this.getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/v1/assets/${backendId}/media`);
+
+            if (!response.ok) {
+                console.warn(`Media yüklenemedi: ${response.status}`);
+                return [];
+            }
+
+            const media = await response.json();
+            console.log(`${assetId} için ${media.length} fotoğraf yüklendi`);
+            return media;
+
+        } catch (error) {
+            console.error('Media yüklenirken hata:', error);
+            return [];
+        }
     }
 };
 

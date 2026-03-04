@@ -463,6 +463,23 @@ body {
     z-index: 99999;
 }
 
+/* Dropdown ile menü arasında görünmez köprü - hover geçişi için */
+.nav-dropdown::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 300px;
+    height: 20px;
+    background: transparent;
+    pointer-events: none;
+}
+
+.nav-dropdown:hover::after {
+    pointer-events: auto;
+}
+
 /* Header right içindeki nav butonları */
 .header-right .nav-btn {
     margin: 0;
@@ -484,23 +501,36 @@ body {
 }
 
 .dropdown-menu {
-    position: absolute;
-    top: calc(100% - 4px); /* Boşluğu azalt */
+    position: fixed;
+    top: var(--header-height);
     left: 50%;
     transform: translateX(-50%) translateY(-10px);
-    padding-top: 8px; /* Hover alanı için padding */
-    background: var(--color-bg-medium);
-    border: 1px solid rgba(212, 168, 68, 0.3);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
-    min-width: 500px; /* 2 sütun için dar */
-    max-height: 400px;
+    padding-top: 16px;
+    background: linear-gradient(180deg, var(--color-bg-medium) 0%, var(--color-bg-dark) 100%);
+    border: 1px solid rgba(212, 168, 68, 0.4);
+    border-top: 2px solid var(--color-accent);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    box-shadow: var(--shadow-lg), 0 8px 32px rgba(0, 0, 0, 0.5);
+    width: 90vw;
+    max-width: 1200px;
+    max-height: calc(100vh - var(--header-height) - 100px);
     overflow-y: auto;
-    z-index: 99999; /* Haritanın üstünde görünsün */
+    z-index: 99999;
     opacity: 0;
     visibility: hidden;
     transition: all var(--transition-normal);
     pointer-events: none;
+}
+
+/* Dropdown menüsünde hover alanını genişlet */
+.dropdown-menu::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: transparent;
 }
 
 .nav-dropdown:hover .dropdown-menu {
@@ -512,34 +542,38 @@ body {
 
 .dropdown-content {
     display: grid;
-    grid-template-columns: repeat(2, 1fr); /* 2 sütun: Osmanlı, Bizans */
-    gap: var(--spacing-lg);
-    padding: var(--spacing-md);
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-md);
+    padding: var(--spacing-lg);
 }
 
 .dropdown-section {
     padding: var(--spacing-md);
-    border-right: 1px solid rgba(212, 168, 68, 0.2);
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(212, 168, 68, 0.15);
     display: flex;
     flex-direction: column;
     gap: var(--spacing-sm);
+    transition: all var(--transition-fast);
 }
 
-.dropdown-section:last-child {
-    border-right: none;
+.dropdown-section:hover {
+    background: rgba(212, 168, 68, 0.08);
+    border-color: rgba(212, 168, 68, 0.3);
 }
 
 .dropdown-section-title {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-sm) var(--spacing-lg);
-    font-size: 0.7rem;
+    display: block;
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 0.8rem;
     font-weight: 600;
     color: var(--color-accent);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 0.5px;
     margin: 0;
+    border-bottom: 1px solid rgba(212, 168, 68, 0.2);
+    padding-bottom: var(--spacing-sm);
+    margin-bottom: var(--spacing-xs);
 }
 
 .period-icon {
@@ -550,29 +584,73 @@ body {
 .dropdown-item {
     display: flex;
     align-items: center;
-    gap: var(--spacing-md);
+    justify-content: space-between;
+    gap: var(--spacing-sm);
     width: 100%;
-    padding: var(--spacing-sm) var(--spacing-lg);
+    padding: var(--spacing-sm) var(--spacing-md);
     background: transparent;
     border: none;
+    border-radius: var(--radius-sm);
     color: var(--color-text-primary);
     cursor: pointer;
     transition: all var(--transition-fast);
     text-align: left;
     font-family: var(--font-body);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
 
 .dropdown-item:hover {
     background: var(--color-surface);
     color: var(--color-accent);
-    padding-left: calc(var(--spacing-lg) + var(--spacing-sm));
 }
 
-.asset-icon {
-    font-size: 1.2rem;
-    width: 24px;
-    text-align: center;
+.asset-period-tag {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    background: rgba(212, 168, 68, 0.2);
+    border-radius: var(--radius-sm);
+    color: var(--color-accent);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Dropdown yüklenme durumu */
+.dropdown-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-xl);
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+}
+
+/* Responsive dropdown */
+@media (max-width: 1200px) {
+    .dropdown-menu {
+        width: 95vw;
+    }
+
+    .dropdown-content {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .dropdown-menu {
+        width: 100vw;
+        left: 0;
+        transform: translateX(0) translateY(-10px);
+        border-radius: 0;
+    }
+
+    .nav-dropdown:hover .dropdown-menu {
+        transform: translateX(0) translateY(0);
+    }
+
+    .dropdown-content {
+        grid-template-columns: 1fr;
+        padding: var(--spacing-md);
+    }
 }
 
 .asset-name {
@@ -838,30 +916,71 @@ body {
 }
 
 /* ============================================
-   Photo Gallery Placeholder
+   Photo Gallery
    ============================================ */
-.photo-gallery-placeholder {
-    background: var(--color-surface);
-    border: 2px dashed rgba(212, 168, 68, 0.3);
-    border-radius: var(--radius-md);
-    padding: var(--spacing-xl);
-    text-align: center;
+.photo-gallery {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
 }
 
-.gallery-placeholder-inner {
+.gallery-item {
+    position: relative;
+    width: 100%;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--color-surface);
+    border: 1px solid rgba(212, 168, 68, 0.2);
+}
+
+.gallery-item img {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
+    max-height: 200px;
+    transition: transform 0.3s ease;
+}
+
+.gallery-item:hover img {
+    transform: scale(1.02);
+}
+
+.gallery-item.primary {
+    border: 2px solid var(--color-accent);
+}
+
+.gallery-caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+    color: var(--color-text);
+    font-size: 0.8rem;
+}
+
+.gallery-placeholder {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: var(--spacing-md);
+    padding: var(--spacing-xl);
+    background: var(--color-surface);
+    border: 2px dashed rgba(212, 168, 68, 0.3);
+    border-radius: var(--radius-md);
     color: var(--color-text-muted);
+    text-align: center;
 }
 
-.gallery-placeholder-inner svg {
+.gallery-placeholder svg {
     opacity: 0.4;
     color: var(--color-accent);
 }
 
-.gallery-placeholder-inner p {
+.gallery-placeholder p {
     font-size: 0.85rem;
     margin: 0;
 }
@@ -1005,6 +1124,67 @@ body {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-sm);
+}
+
+/* View Controls Section - Panelin üst kısmında sabit */
+.view-controls-section {
+    background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg-medium) 100%);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md) !important;
+    margin-bottom: var(--spacing-md) !important;
+}
+
+/* View Controls - Panel içi görünüm kontrolleri */
+.view-controls {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-wrap: nowrap;
+}
+
+.view-control-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: var(--spacing-sm) var(--spacing-xs);
+    background: var(--color-bg-dark);
+    border: 1px solid var(--color-primary-light);
+    border-radius: var(--radius-md);
+    color: var(--color-text-primary);
+    font-size: 0.7rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    min-height: 60px;
+}
+
+.view-control-btn:hover {
+    background: var(--color-primary);
+    border-color: var(--color-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(212, 168, 68, 0.3);
+}
+
+.view-control-btn.active {
+    background: var(--color-primary);
+    border-color: var(--color-accent);
+    color: var(--color-accent-light);
+    box-shadow: 0 0 12px rgba(212, 168, 68, 0.4);
+}
+
+.view-control-btn svg {
+    width: 22px;
+    height: 22px;
+    opacity: 0.9;
+}
+
+.view-control-btn:hover svg,
+.view-control-btn.active svg {
+    opacity: 1;
+    stroke: var(--color-accent);
 }
 
 .layer-item {
@@ -2080,4 +2260,115 @@ body {
     font-size: 0.8rem;
 }
 
+/* ============================================
+   Asset View Controls - Harita Üzerinde Floating
+   ============================================ */
+.asset-view-controls {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    display: flex;
+    gap: 12px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, rgba(61, 15, 20, 0.95) 0%, rgba(26, 10, 12, 0.98) 100%);
+    backdrop-filter: blur(12px);
+    border: 2px solid var(--color-accent);
+    border-radius: var(--radius-xl);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.5),
+        0 0 24px rgba(212, 168, 68, 0.3),
+        inset 0 1px 0 rgba(212, 168, 68, 0.2);
+    z-index: 1001;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+}
+
+.asset-view-controls.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+}
+
+.asset-view-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 16px;
+    min-width: 90px;
+    background: linear-gradient(180deg, rgba(107, 28, 35, 0.8) 0%, rgba(61, 15, 20, 0.9) 100%);
+    border: 1px solid rgba(212, 168, 68, 0.4);
+    border-radius: var(--radius-lg);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+}
+
+.asset-view-btn:hover {
+    background: linear-gradient(180deg, var(--color-primary-light) 0%, var(--color-primary) 100%);
+    border-color: var(--color-accent);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(212, 168, 68, 0.4);
+}
+
+.asset-view-btn:active {
+    transform: translateY(-1px);
+}
+
+.asset-view-btn.active {
+    background: linear-gradient(180deg, var(--color-accent) 0%, var(--color-accent-dark) 100%);
+    border-color: var(--color-accent-light);
+    color: var(--color-primary-dark);
+    box-shadow:
+        0 0 20px rgba(212, 168, 68, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.asset-view-btn.active svg {
+    stroke: var(--color-primary-dark);
+}
+
+.asset-view-btn svg {
+    stroke: var(--color-accent);
+    transition: all var(--transition-fast);
+}
+
+.asset-view-btn:hover svg {
+    stroke: var(--color-accent-light);
+}
+
+.asset-view-btn span {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+/* Responsive - Küçük ekranlarda daha kompakt */
+@media (max-width: 768px) {
+    .asset-view-controls {
+        padding: 10px 14px;
+        gap: 8px;
+        bottom: 16px;
+    }
+
+    .asset-view-btn {
+        padding: 10px 12px;
+        min-width: 70px;
+    }
+
+    .asset-view-btn span {
+        font-size: 0.65rem;
+    }
+
+    .asset-view-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+}
 

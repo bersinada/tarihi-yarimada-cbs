@@ -337,6 +337,62 @@ async def get_asset_media(asset_id: int, db: Session = Depends(get_db)):
     return asset.media
 
 
+@router.post("/{asset_id}/media", response_model=MediaResponse, status_code=201)
+async def add_asset_media(
+    asset_id: int,
+    url: str,
+    caption: Optional[str] = None,
+    media_type: str = "image",
+    is_primary: bool = False,
+    db: Session = Depends(get_db)
+):
+    """
+    Add media to an asset.
+
+    - **url**: Image URL (e.g., /images/assets/suleymaniye-1.jpg)
+    - **caption**: Optional caption for the image
+    - **media_type**: Type of media (image, historical, video, 360)
+    - **is_primary**: Whether this is the primary/cover image
+    """
+    asset = db.query(HeritageAsset).filter(HeritageAsset.id == asset_id).first()
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    # If this is set as primary, unset other primaries
+    if is_primary:
+        db.query(Media).filter(
+            Media.asset_id == asset_id,
+            Media.is_primary == True
+        ).update({"is_primary": False})
+
+    media = Media(
+        asset_id=asset_id,
+        url=url,
+        caption=caption,
+        media_type=media_type,
+        is_primary=is_primary
+    )
+    db.add(media)
+    db.commit()
+    db.refresh(media)
+    return media
+
+
+@router.delete("/{asset_id}/media/{media_id}", status_code=204)
+async def delete_asset_media(asset_id: int, media_id: int, db: Session = Depends(get_db)):
+    """Delete a media item from an asset"""
+    media = db.query(Media).filter(
+        Media.id == media_id,
+        Media.asset_id == asset_id
+    ).first()
+    if not media:
+        raise HTTPException(status_code=404, detail="Media not found")
+
+    db.delete(media)
+    db.commit()
+    return None
+
+
 # ==================================================
 # Statistics
 # ==================================================

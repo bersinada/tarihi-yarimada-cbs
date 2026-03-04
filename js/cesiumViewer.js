@@ -54,7 +54,15 @@ const CesiumViewer = (function() {
         '4271001': 0,  // İç mekan 1
         '4275532': 0,  // İç mekan 2
         '4277312': 0,  // Şadırvan
-        '4318496': 0   // Sultanahmet Camii
+        '4318496': 0,  // Sultanahmet Camii
+        // Sultanahmet Meydanı Yapıları
+        '4361716': 0,  // Firuzağa Camii
+        '4361663': 0,  // Örme Dikilitaş
+        '4361661': 0,  // Dikilitaş (Theodosius)
+        '4361660': 0,  // Yılanlı Sütun
+        '4361659': 0,  // I. Ahmet Türbesi
+        '4361658': 0,  // Aya İrini
+        '4361657': 0   // Alman Çeşmesi
     };
 
     // Altlık harita sağlayıcıları
@@ -797,12 +805,109 @@ const CesiumViewer = (function() {
         console.log('Kamera mevcut pozisyonda orbit moduna kilitlendi');
     }
 
+    // Orbit state
+    let orbitState = {
+        active: false,
+        center: null,
+        radius: null,
+        eventHandler: null
+    };
+
+    /**
+     * Belirli bir tileset etrafında orbit modu
+     * @param {number} ionAssetId - Cesium Ion asset ID
+     * @param {object} fallbackPosition - Yapının koordinatları {lon, lat, height, radius}
+     */
+    function orbitAroundTileset(ionAssetId, fallbackPosition = null) {
+        // Fallback koordinatları zorunlu - yapının gerçek konumu
+        if (!fallbackPosition || !fallbackPosition.lon || !fallbackPosition.lat) {
+            console.warn('Orbit başlatılamadı - yapı koordinatları gerekli');
+            return false;
+        }
+
+        // Merkez HER ZAMAN yapının koordinatlarından hesaplanır
+        // Bounding sphere merkezi modelin geometrik merkezi olduğu için tutarsız sonuçlar verebilir
+        const center = Cesium.Cartesian3.fromDegrees(
+            fallbackPosition.lon + 0.0001,
+            fallbackPosition.lat - 0.0003,
+            fallbackPosition.height || 25
+        );
+
+        // Radius: Tileset varsa bounding sphere'den al, yoksa fallback'ten
+        let radius = fallbackPosition.radius || 50;
+        const tileset = loadedTilesets[ionAssetId];
+
+        if (tileset && tileset.boundingSphere && tileset.boundingSphere.radius > 0) {
+            // Tileset radius'unu kullan ama makul sınırlar içinde
+            const tilesetRadius = tileset.boundingSphere.radius;
+            // Çok büyük modellerde (>200m) radius'u sınırla
+            radius = Math.min(tilesetRadius, 200);
+            // Çok küçük modellerde (<10m) minimum radius uygula
+            radius = Math.max(radius, 15);
+            console.log('Orbit: Tileset radius kullanılıyor:', tilesetRadius, '-> sınırlı:', radius);
+        } else {
+            console.log('Orbit: Fallback radius kullanılıyor:', radius);
+        }
+
+        // Orbit state'i kaydet
+        orbitState.active = true;
+        orbitState.center = center;
+        orbitState.radius = radius;
+
+        // Kamera kontrolcüsünü ayarla
+        const controller = viewer.scene.screenSpaceCameraController;
+        controller.minimumZoomDistance = radius * 0.3;
+        controller.maximumZoomDistance = radius * 8;
+
+        // Başlangıç pozisyonu
+        const heading = Cesium.Math.toRadians(0);
+        const pitch = Cesium.Math.toRadians(-35);
+        const range = radius * 2.5;
+
+        // Transform matrisi (merkez etrafında orbit için)
+        const transform = Cesium.Transforms.eastNorthUpToFixedFrame(center);
+
+        // Bounding sphere oluştur (uçuş için)
+        const boundingSphere = new Cesium.BoundingSphere(center, radius);
+
+        // Kamerayı modelin çevresine uçur ve kilitle
+        viewer.camera.flyToBoundingSphere(boundingSphere, {
+            duration: 1.2,
+            offset: new Cesium.HeadingPitchRange(heading, pitch, range),
+            complete: function() {
+                // Uçuş tamamlandığında kamerayı merkeze kilitle
+                viewer.camera.lookAtTransform(
+                    transform,
+                    new Cesium.HeadingPitchRange(
+                        viewer.camera.heading,
+                        viewer.camera.pitch,
+                        range
+                    )
+                );
+                console.log('Orbit kilidi aktif - Merkez etrafında dönüş modu');
+            }
+        });
+
+        console.log('Orbit modu aktif - Asset:', ionAssetId, 'Radius:', radius);
+        return true;
+    }
+
     /**
      * Orbit kilidini kaldır - Serbest hareket
      */
     function unlockOrbit() {
-        viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
-        console.log('Orbit kilidi kaldırıldı - Serbest hareket');
+        if (orbitState.active) {
+            viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+            orbitState.active = false;
+            orbitState.center = null;
+            orbitState.radius = null;
+
+            // Kamera kontrolcüsünü sıfırla
+            const controller = viewer.scene.screenSpaceCameraController;
+            controller.minimumZoomDistance = 1.0;
+            controller.maximumZoomDistance = Number.POSITIVE_INFINITY;
+        }
+        console.log('Orbit kilidi kaldırıldı');
     }
 
     /**
@@ -1279,6 +1384,7 @@ const CesiumViewer = (function() {
         enableOrbitAroundModel,
         lockOrbitToModel,
         unlockOrbit,
+        orbitAroundTileset,
         
         // Settings
         setShadows,

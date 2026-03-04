@@ -16,6 +16,9 @@ env/
 *.sqlite
 *.sqlite3
 
+# AI Tools
+.claude/
+
 # IDE
 .vscode/
 .idea/

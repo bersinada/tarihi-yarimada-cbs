@@ -81,14 +81,17 @@ app.include_router(segments_router)
 app.include_router(notes_router)
 app.include_router(ogc_router)
 
-# Static files (CSS, JS) - only if directories exist
+# Static files (CSS, JS, Images) - only if directories exist
 css_path = BASE_DIR / "css"
 js_path = BASE_DIR / "js"
+images_path = BASE_DIR / "images"
 
 if css_path.exists():
     app.mount("/css", StaticFiles(directory=css_path), name="css")
 if js_path.exists():
     app.mount("/js", StaticFiles(directory=js_path), name="js")
+if images_path.exists():
+    app.mount("/images", StaticFiles(directory=images_path), name="images")
 
 
 # ==================================================
