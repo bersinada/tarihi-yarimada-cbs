@@ -1,6 +1,6 @@
 # Tarihi Yarımada CBS Platformu
 
-**İstanbul Tarihi Yarımada'daki kültürel miras yapılarının 3D modellerini, uzamsal verilerini ve tarihi bilgilerini bir arada sunan, Neo4j + Gemini tabanlı GraphRAG destekli interaktif CBS platformu.**
+**İstanbul Tarihi Yarımada'daki kültürel miras yapılarının 3D modellerini, konumsal verilerini ve tarihi bilgilerini bir arada sunan, Neo4j + Gemini tabanlı GraphRAG destekli uzamsal olarak akıllı CBS platformu.**
 
 <p align="center">
   <img src="assets/silhouette.png" alt="İstanbul Silüeti" width="600">
@@ -21,30 +21,30 @@
 ## Ekran Görüntüleri
 
 <p align="center">
-  <img src="docs/screenshots/01-overview.png" alt="3D Harita Genel Görünüm" width="800">
-  <br><em>Sultanahmet Meydanı ve çevresindeki yapıların 3D görünümü</em>
+  <img src="docs/screenshots/loading-page.png" alt="Tarihi Yarımada Web Sitesi Giriş" width="800">
+  <br><em>Web site açılış ekranı</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/01-overview.png" alt="Harita Genel Görünüm" width="800">
+  <br><em>Harita genel görünümü</em>
 </p>
 
 <p align="center">
   <img src="docs/screenshots/02-model-detail.png" alt="3D Model Detay" width="800">
-  <br><em>Ayasofya SAM3D modeli yakın görünüm</em>
+  <br><em>Sultanahmet Camii SAM3D modeli yakın görünüm</em>
 </p>
 
 <p align="center">
   <img src="docs/screenshots/03-chatbot.png" alt="Evliya AI Chatbot" width="800">
-  <br><em>Evliya AI — GraphRAG tabanlı tarihi yapı soru-cevap sistemi</em>
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/04-layer-panel.png" alt="Katman Yönetimi" width="800">
-  <br><em>Yapı katmanlarını bağımsız açıp kapama paneli</em>
+  <br><em>Evliya AI - Uzamsal zeka ile tarihi mekanları anlamlandıran soru-cevap arayüzü</em>
 </p>
 
 ---
 
 ## Nedir ve Neden Yapıldı?
 
-Bu proje İTÜ CBS Projeleri dersi kapsamında bir ekip çalışması olarak başladı; ancak dersin bitiminin ardından bireysel bir projeye dönüştürülerek geliştirilmeye devam etti.
+Bu proje İTÜ CBS Projeleri dersi kapsamında bir ekip çalışması olarak başladı; daha sonra bireysel bir projeye dönüştürülerek geliştirilmeye devam etti.
 
 **Başlangıç noktası:** Tek bir yapının (Molla Hüsrev Camii) fotogrametrik yöntemlerle üretilmiş nokta bulutu verilerinden oluşan, statik bir 3D görselleştirme uygulamasıydı.
 
@@ -59,7 +59,7 @@ Projenin arkasındaki temel soru şuydu: *Tarihi bir yapıyı yalnızca görsell
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        KULLANICI                            │
-│               Tarayıcı (CesiumJS + Leaflet)                 │
+│               Tarayıcı (CesiumJS)                 │
 └──────────────────────┬──────────────────────────────────────┘
                        │ HTTP / REST
 ┌──────────────────────▼──────────────────────────────────────┐
