@@ -31,6 +31,11 @@
 </p>
 
 <p align="center">
+  <img src="docs/screenshots/sultanahmet-meydani.png" alt="Sultanahmet Meydanı" width="800">
+  <br><em>Pilot bölge olarak belirlenmiş olan Sultanahmet Meydanı </em>
+</p>
+
+<p align="center">
   <img src="docs/screenshots/02-model-detail.png" alt="3D Model Detay" width="800">
   <br><em>Sultanahmet Camii SAM3D modeli yakın görünüm</em>
 </p>
