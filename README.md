@@ -18,6 +18,16 @@
 
 ---
 
+## Demo
+
+<p align="center">
+  <a href="https://drive.google.com/file/d/1zRc1wMFPb8YWnn_WTbpgqG29zSAT8ehH/view?usp=drive_link">
+    <img src="https://img.shields.io/badge/▶%20Demo%20Videosu-Google%20Drive-4285F4?style=for-the-badge&logo=google-drive&logoColor=white" alt="Demo Video">
+  </a>
+</p>
+
+---
+
 ## Ekran Görüntüleri
 
 <p align="center">
