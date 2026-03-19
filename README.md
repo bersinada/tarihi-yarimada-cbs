@@ -1,30 +1,131 @@
-# 🏛️ Tarihi Yarımada CBS Platformu
+# Tarihi Yarımada CBS Platformu
 
-İstanbul Tarihi Yarımada'daki kültürel miras yapılarının 3D modellerini ve uzamsal verilerini sunan, GraphRAG destekli interaktif CBS (Coğrafi Bilgi Sistemi) platformu.
+**İstanbul Tarihi Yarımada'daki kültürel miras yapılarının 3D modellerini, uzamsal verilerini ve tarihi bilgilerini bir arada sunan, Neo4j + Gemini tabanlı GraphRAG destekli interaktif CBS platformu.**
 
 <p align="center">
   <img src="assets/silhouette.png" alt="İstanbul Silüeti" width="600">
 </p>
 
-## 📋 Proje Hakkında
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=flat&logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/PostgreSQL-PostGIS-336791?style=flat&logo=postgresql&logoColor=white" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/CesiumJS-3D%20Maps-4DB6AC?style=flat" alt="CesiumJS">
+  <img src="https://img.shields.io/badge/Neo4j-GraphRAG-008CC1?style=flat&logo=neo4j&logoColor=white" alt="Neo4j">
+  <img src="https://img.shields.io/badge/Gemini%202.5%20Flash-4285F4?style=flat&logo=google&logoColor=white" alt="Gemini 2.5 Flash">
+  <img src="https://img.shields.io/badge/OGC-WFS%202.0-green?style=flat" alt="OGC WFS">
+</p>
 
-Proje, İTÜ CBS Projeleri dersi kapsamında ekip çalışması olarak başlatılmış; ardından bireysel bir projeye dönüştürülerek geliştirilmeye devam etmiştir.
+---
 
-**Başlangıçta** tek bir yapının (Molla Hüsrev Camii) fotogrametrik yöntemlerle elde edilmiş nokta bulutu verilerinden oluşan bir 3D görselleştirme platformuydu. **Bireysel projeye dönüşümüyle birlikte** hedef, Tarihi Yarımada'daki kültürel miras yapılarını kapsayan, her yapının kendi uzamsal ve semantik bağlamının farkında olduğu işlevsel bir bilgi sistemine ulaşmaktı.
+## Ekran Görüntüleri
+
+<p align="center">
+  <img src="docs/screenshots/01-overview.png" alt="3D Harita Genel Görünüm" width="800">
+  <br><em>Sultanahmet Meydanı ve çevresindeki yapıların 3D görünümü</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/02-model-detail.png" alt="3D Model Detay" width="800">
+  <br><em>Ayasofya SAM3D modeli yakın görünüm</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/03-chatbot.png" alt="Evliya AI Chatbot" width="800">
+  <br><em>Evliya AI — GraphRAG tabanlı tarihi yapı soru-cevap sistemi</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/04-layer-panel.png" alt="Katman Yönetimi" width="800">
+  <br><em>Yapı katmanlarını bağımsız açıp kapama paneli</em>
+</p>
+
+---
+
+## Nedir ve Neden Yapıldı?
+
+Bu proje İTÜ CBS Projeleri dersi kapsamında bir ekip çalışması olarak başladı; ancak dersin bitiminin ardından bireysel bir projeye dönüştürülerek geliştirilmeye devam etti.
+
+**Başlangıç noktası:** Tek bir yapının (Molla Hüsrev Camii) fotogrametrik yöntemlerle üretilmiş nokta bulutu verilerinden oluşan, statik bir 3D görselleştirme uygulamasıydı.
+
+**Hedef:** İstanbul Tarihi Yarımada'daki kültürel miras yapılarını kapsayan; her yapının hem uzamsal hem semantik bağlamının farkında olduğu, standart uyumlu, işlevsel bir bilgi sistemi oluşturmak.
+
+Projenin arkasındaki temel soru şuydu: *Tarihi bir yapıyı yalnızca görselle değil, onun tarihini, mimarisini ve komşularını "bilen" bir sistem olarak nasıl temsil ederiz?*
+
+---
+
+## Nasıl Çalışıyor?
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        KULLANICI                            │
+│               Tarayıcı (CesiumJS + Leaflet)                 │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ HTTP / REST
+┌──────────────────────▼──────────────────────────────────────┐
+│                  BACKEND — FastAPI                           │
+│   ┌─────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│   │  Eser API   │  │   OGC WFS    │  │   Chatbot Proxy  │  │
+│   │  (CRUD)     │  │  (ISO 19115) │  │                  │  │
+│   └──────┬──────┘  └──────┬───────┘  └────────┬─────────┘  │
+└──────────┼───────────────┼──────────────────┼──────────────┘
+           │               │                  │
+┌──────────▼───────┐       │         ┌────────▼─────────────┐
+│  PostgreSQL      │       │         │  GraphRAG Servisi    │
+│  + PostGIS       │       │         │  (ayrı proje)        │
+│  Mekansal veri   │       │         │  Neo4j + Gemini API  │
+│  Koordinatlar    │       │         │  Graf DB + LLM       │
+│  Segment bilgisi │       │         │  port: 8002          │
+└──────────────────┘       │         └──────────────────────┘
+                           │
+                    ┌──────▼──────┐
+                    │ Cesium Ion  │
+                    │ 3D Tiles    │
+                    │ (SAM3D)     │
+                    └─────────────┘
+```
 
 ### Veri ve 3D Model Yaklaşımı
 
-Nokta bulutu verilerinin elde edilmesinin güçlüğü ve bu boyuttaki verileri taşıyabilecek altyapı kısıtları, projenin en büyük teknik engelleriydi. Bu sorunu çözmek için META'nın **SAM3D** (Segment Anything in 3D) segmentasyon modeli tercih edildi. SAM3D, fotogrametri gibi yüksek doğruluk sağlamamakla birlikte —ki özünde bir segmentasyon modelidir— yapıların temsili 3D modellerini **1–2 MB** gibi son derece küçük veri boyutlarıyla üretebilmektedir. Sonuçlar, bu boyutlar göz önüne alındığında oldukça yeterlidir.
+Nokta bulutu verilerinin elde edilmesinin güçlüğü ve bu boyuttaki verileri taşıyabilecek altyapı kısıtları projenin en büyük teknik engeliydi. **İki seçenek vardı:**
 
-### GraphRAG Entegrasyonu
+| Yaklaşım | Doğruluk | Veri Boyutu | Ölçeklenebilirlik |
+|----------|----------|-------------|-------------------|
+| Fotogrametri (nokta bulutu) | Yüksek | 500 MB+ / yapı | Düşük |
+| META SAM3D (segmentasyon) | Orta | **1–2 MB / yapı** | Yüksek |
 
-Modellerin yalnızca görsel değil, **uzamsal olarak da akıllı** olması amacıyla projeye Microsoft GraphRAG entegre edildi. Graf veritabanı olarak **Neo4j** kullanılmaktadır. GraphRAG servisi bu repodan bağımsız ayrı bir projede yer almakta olup `http://localhost:8002` adresinde çalışır. Siteye eklenen **Evliya AI** chatbot sayesinde kullanıcılar; yapılar hakkındaki tarihsel, mimari ve uzamsal bilgilere doğal dil arayüzüyle erişebiliyor. Artık her tarihi yapı, kendisinin ve yakın çevresinin farkında bir varlık olarak platformda yer almaktadır.
+13 yapı için nokta bulutu verisi toplamak hem pratik hem de altyapı açısından mümkün değildi. META'nın **SAM3D** (Segment Anything in 3D) modeli, fotogrametrik doğruluk sunmasa da bu ölçekte temsili ve yüklenebilir 3D modeller üretmenin en makul yoluydu.
 
-### Pilot Bölge
+### GraphRAG ve Uzamsal Zeka
 
-Platform bir **MVP** olarak tasarlandı; pilot bölge olarak **Sultanahmet Meydanı** ve çevresi seçildi. Şu anda **13 eserin** 3D modeli ve tarihi bilgisi sistemde yer almakta olup, bu eserlerden bir kısmı henüz GraphRAG'e entegre edilmemiştir. Meydan dışındaki bazı yapılar da modelleri ve bilgileriyle platformda bulunmaktadır.
+Salt görsel bir platform yapmak yetmezdi. Her yapının kendisini ve komşularını "bilmesi" için **Neo4j** graf veritabanı üzerine inşa edilmiş bir **GraphRAG** sistemi geliştirildi; LLM olarak **Gemini 2.5 Flash** kullanıldı. Kullanıcılar **Evliya AI** chatbot üzerinden şu tür sorular sorabilir:
 
-### Eserler
+- *"Ayasofya ile Sultanahmet Camii arasındaki ilişki nedir?"*
+- *"Bu meydandaki Bizans dönemi eserleri hangileri?"*
+- *"Dikilitaş'ın hikayesi ne?"*
+
+GraphRAG servisi bu repodan bağımsız ayrı bir projede çalışmaktadır.
+
+---
+
+## Özellikler
+
+| Özellik | Açıklama |
+|---------|----------|
+| **3D Görselleştirme** | CesiumJS ile SAM3D tabanlı 3D Tiles modelleri (1–2 MB/yapı) |
+| **Katman Yönetimi** | Her yapı katmanını bağımsız açıp kapama |
+| **Kamera Modları** | Orbit, First Person, Walking kamera kontrolleri |
+| **Evliya AI Chatbot** | GraphRAG tabanlı uzamsal-semantik doğal dil soru-cevap |
+| **Not Sistemi** | Yapılar üzerine kullanıcı notları ekleme |
+| **OGC WFS 2.0** | Standart uyumlu Web Feature Service endpoint'i |
+| **ISO 19115 Metadata** | Avrupa ve Türkiye standartlarına uygun veri modeli |
+| **PostGIS** | Mekansal sorgular için PostgreSQL + PostGIS entegrasyonu |
+
+---
+
+## Sistemdeki Yapılar
+
+Platform bir **MVP** olarak tasarlandı; pilot bölge **Sultanahmet Meydanı** ve çevresi. Şu anda **13 eserin** 3D modeli ve tarihi bilgisi sistemde yer alıyor.
 
 | # | Eser | Tür | Dönem | Yapım Yılı | GraphRAG |
 |---|------|-----|-------|------------|----------|
@@ -42,28 +143,22 @@ Platform bir **MVP** olarak tasarlandı; pilot bölge olarak **Sultanahmet Meyda
 | 12 | III. Ahmet Çeşmesi | Çeşme | Osmanlı | 1728 | ✅ |
 | 13 | Molla Hüsrev Camii | Cami | Osmanlı | 1455 | ⏳ |
 
-### Özellikler
+---
 
-- **3D Görselleştirme** — Cesium JS ile SAM3D tabanlı 3D Tiles modelleri (1–2 MB/yapı)
-- **Katman Yönetimi** — Yapı katmanlarını bağımsız açıp kapama
-- **Kamera Modları** — Orbit, First Person, Walking modları
-- **Evliya AI Chatbot** — GraphRAG tabanlı uzamsal-semantik soru-cevap
-- **Not Sistemi** — Yapılar üzerine kullanıcı notları
-- **INSPIRE / TUCBS Uyumlu** — Avrupa ve Türkiye standartlarına uygun veri modeli
-- **PostGIS Entegrasyonu** — Mekansal sorgular için PostgreSQL + PostGIS
-
-## 🛠️ Teknolojiler
+## Teknoloji Yığını
 
 | Katman | Teknoloji |
 |--------|-----------|
-| Frontend | HTML5, CSS3, JavaScript, Cesium JS, Leaflet |
-| Backend | FastAPI (Python 3.11+) |
+| Frontend | HTML5, CSS3, JavaScript, CesiumJS |
+| Backend | FastAPI |
 | Veritabanı | PostgreSQL + PostGIS |
-| 3D Modelleme | META SAM3D (Segment Anything in 3D) |
-| AI / RAG | Microsoft GraphRAG + Neo4j |
+| 3D Modelleme | META SAM3D |
+| AI / RAG | Neo4j (Graf DB) + Gemini 2.5 Flash |
 | Standartlar | INSPIRE, TUCBS, ISO 19115, Dublin Core, OGC WFS 2.0 |
 
-## 🚀 Kurulum
+---
+
+## Kurulum
 
 ### Gereksinimler
 
@@ -114,9 +209,28 @@ http://localhost:8080
 
 > **Windows için kısayol:** `start-local-test.bat` (backend) ve `start-frontend.bat` (frontend) dosyalarını kullanabilirsiniz.
 
-> **Chatbot:** Evliya AI chatbot'un çalışması için GraphRAG servisinin `http://localhost:8002` adresinde çalışıyor olması gerekir.
+> **Chatbot:** Evliya AI'nin çalışması için GraphRAG servisinin `http://localhost:8002` adresinde aktif olması gerekir.
 
-## 📁 Proje Yapısı
+---
+
+## API
+
+API dokümantasyonu `http://localhost:8000/docs` (Swagger UI) adresinde otomatik olarak üretilmektedir.
+
+| Metot | Endpoint | Açıklama |
+|-------|----------|----------|
+| `GET` | `/api/v1/health` | Sistem sağlık kontrolü |
+| `GET` | `/api/cesium-config` | Cesium token |
+| `GET` | `/api/v1/assets` | Tüm eserleri listele |
+| `GET` | `/api/v1/assets/{id}` | Eser detayı |
+| `POST` | `/api/v1/assets` | Yeni eser ekle |
+| `GET` | `/api/v1/search?q=` | Eser arama |
+| `GET` | `/api/v1/metadata` | Dataset metadata (ISO 19115) |
+| `GET` | `/api/v1/ogc/wfs` | OGC WFS endpoint |
+
+---
+
+## Proje Yapısı
 
 ```
 tarihi-yarimada-cbs/
@@ -129,6 +243,8 @@ tarihi-yarimada-cbs/
 │   ├── assets.js                 # Eser verileri ve yönetimi
 │   ├── cesiumViewer.js           # Cesium 3D viewer ve kamera kontrolleri
 │   └── chatbot-widget.js         # Evliya AI chatbot widget
+├── docs/
+│   └── screenshots/              # README görselleri
 ├── assets/                       # Logo ve görseller
 ├── images/assets/                # Eser fotoğrafları
 ├── backend/
@@ -146,40 +262,24 @@ tarihi-yarimada-cbs/
 │   │   └── schemas/              # Pydantic şemaları
 │   ├── scripts/
 │   │   └── seed_data.py          # Örnek veri yükleme
-│   └── requirements.txt          # Python bağımlılıkları
+│   └── requirements.txt
 ├── start-local-test.bat          # Windows backend başlatma
 └── start-frontend.bat            # Windows frontend başlatma
 ```
 
-## 🔗 API
+---
 
-API dokümantasyonuna `http://localhost:8000/docs` (Swagger UI) veya `http://localhost:8000/redoc` adresinden erişebilirsiniz.
+## Standartlar
 
-### Başlıca Endpoint'ler
+Bu platform, hem Avrupa hem de Türkiye ulusal CBS standartlarıyla uyumlu tasarlanmıştır:
 
-| Metot | Endpoint | Açıklama |
-|-------|----------|----------|
-| `GET` | `/api/v1/health` | Sistem sağlık kontrolü |
-| `GET` | `/api/cesium-config` | Cesium token |
-| `GET` | `/api/v1/assets` | Tüm eserleri listele |
-| `GET` | `/api/v1/assets/{id}` | Eser detayı |
-| `POST` | `/api/v1/assets` | Yeni eser ekle |
-| `GET` | `/api/v1/search?q=` | Eser arama |
-| `GET` | `/api/v1/metadata` | Dataset metadata (ISO 19115) |
-| `GET` | `/api/v1/ogc/wfs` | OGC WFS endpoint |
-
-## 📋 Standartlar
-
-- **INSPIRE** — Avrupa Mekansal Veri Altyapısı
-- **TUCBS** — Türkiye Ulusal Coğrafi Bilgi Sistemi
+- **INSPIRE** — Avrupa Mekansal Veri Altyapısı direktifi
+- **TUCBS** — Türkiye Ulusal Coğrafi Bilgi Sistemi standartları
 - **ISO 19115** — Coğrafi metadata standardı
 - **Dublin Core** — Metadata standardı
 - **OGC WFS 2.0** — Web Feature Service
 
-## � Geliştirici
+---
 
 Bireysel proje — İTÜ CBS Projeleri, 2025
-
-## 📄 Lisans
-
-Bu proje akademik amaçlı geliştirilmiştir.
+Akademik amaçlı geliştirilmiştir.
